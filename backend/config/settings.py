@@ -169,8 +169,7 @@ EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 <<<<<<< HEAD
 OPENAI_API_KEY = config('OPENAI_API_KEY', default='')
 =======
-OPENAI_API_KEY = config('OPENAI_API_KEY', default='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')
->>>>>>> 09e9bd2 (first commit)
+OPENAI_API_KEY = config('OPENAI_API_KEY', default='')
 
 # Auditlog
 AUDITLOG_INCLUDE_ALL_MODELS = False
