@@ -178,7 +178,7 @@ PyScreeze==0.1.30
 pytesseract==0.3.13
 pytest==7.4.0
 python-crontab==3.2.0
-python-dateutil==2.9.0.post0
+python-dateutil==2.6.0
 python-decouple==3.8
 python-json-logger==2.0.7
 python-memcached==1.62
