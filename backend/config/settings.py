@@ -1,9 +1,11 @@
 """
 PWD Management System — Django Settings
 """
+import os
 from pathlib import Path
 from decouple import config
 from datetime import timedelta
+import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -72,13 +74,23 @@ TEMPLATES = [{
 ASGI_APPLICATION = 'config.asgi.application'
 WSGI_APPLICATION = 'config.wsgi.application'
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
+# ── Database ──────────────────────────────────────────────────────────────────
+DATABASE_URL = os.environ.get("DATABASE_URL")
 
+DATABASES = {
+    "default": dj_database_url.parse(
+        DATABASE_URL or "db.sqlite3",  # fallback for safety
+        conn_max_age=600,
+        conn_health_checks=True,
+        ssl_require=bool(DATABASE_URL),  # only require SSL in production
+    )
+}
 # PostgreSQL (production)
 # DATABASES = {
 #     'default': {
@@ -166,7 +178,6 @@ EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 
 # OpenAI
-<<<<<<< HEAD
 OPENAI_API_KEY = config('OPENAI_API_KEY', default='')
 =======
 OPENAI_API_KEY = config('OPENAI_API_KEY', default='')
