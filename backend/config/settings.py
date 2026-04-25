@@ -179,8 +179,6 @@ EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 
 # OpenAI
 OPENAI_API_KEY = config('OPENAI_API_KEY', default='')
-=======
-OPENAI_API_KEY = config('OPENAI_API_KEY', default='')
 
 # Auditlog
 AUDITLOG_INCLUDE_ALL_MODELS = False
