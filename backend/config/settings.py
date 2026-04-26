@@ -74,23 +74,23 @@ TEMPLATES = [{
 ASGI_APPLICATION = 'config.asgi.application'
 WSGI_APPLICATION = 'config.wsgi.application'
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
-# ── Database ──────────────────────────────────────────────────────────────────
-DATABASE_URL = os.environ.get("DATABASE_URL")
-
 DATABASES = {
-    "default": dj_database_url.parse(
-        DATABASE_URL or "db.sqlite3",  # fallback for safety
-        conn_max_age=600,
-        conn_health_checks=True,
-        ssl_require=bool(DATABASE_URL),  # only require SSL in production
-    )
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
 }
+# ── Database ──────────────────────────────────────────────────────────────────
+# DATABASE_URL = os.environ.get("DATABASE_URL")
+
+# DATABASES = {
+#     "default": dj_database_url.parse(
+#         DATABASE_URL or "db.sqlite3",  # fallback for safety
+#         conn_max_age=600,
+#         conn_health_checks=True,
+#         ssl_require=bool(DATABASE_URL),  # only require SSL in production
+#     )
+# }
 # PostgreSQL (production)
 # DATABASES = {
 #     'default': {
