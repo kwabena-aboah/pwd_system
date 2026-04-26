@@ -83,12 +83,14 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # ── Database ──────────────────────────────────────────────────────────────────
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
+if not DATABASE_URL:
+    raise Exception("DATABASE_URL is not set in environment variables")
+
 DATABASES = {
     "default": dj_database_url.parse(
-        DATABASE_URL,  # fallback for safety
+        DATABASE_URL,
         conn_max_age=600,
-        conn_health_checks=True,
-        ssl_require=bool(DATABASE_URL),  # only require SSL in production
+        ssl_require=True
     )
 }
 # PostgreSQL (production)
@@ -155,6 +157,8 @@ CORS_ALLOWED_ORIGINS = config(
     default='http://localhost:5173,http://127.0.0.1:5173'
 ).split(',')
 CORS_ALLOW_CREDENTIALS = True
+CSRF_TRUSTED_ORIGINS = ["https://*.vercel.app"]
+CSRF_COOKIE_SECURE = True
 
 # Channels
 CHANNEL_LAYERS = {
