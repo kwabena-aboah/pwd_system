@@ -3,6 +3,7 @@ import axios from 'axios'
 
 const api = axios.create({
   baseURL: '/api',
+  // baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
   headers: { 'Content-Type': 'application/json' },
 })
 
@@ -26,10 +27,11 @@ api.interceptors.response.use(
         localStorage.setItem('pwd_access', data.access)
         original.headers.Authorization = `Bearer ${data.access}`
         return api(original)
-      } catch {
-        localStorage.clear()
-        window.location.href = '/login'
-      }
+      } 
+      // catch {
+      //   localStorage.clear()
+      //   window.location.href = '/login'
+      // }
     }
     return Promise.reject(err)
   }
