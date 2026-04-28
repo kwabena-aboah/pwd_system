@@ -15,26 +15,26 @@ api.interceptors.request.use(config => {
 })
 
 // Auto-refresh on 401
-api.interceptors.response.use(
-  res => res,
-  async err => {
-    const original = err.config
-    if (err.response?.status === 401 && !original._retry) {
-      original._retry = true
-      try {
-        const refresh = localStorage.getItem('pwd_refresh')
-        const { data } = await axios.post('/api/auth/refresh/', { refresh })
-        localStorage.setItem('pwd_access', data.access)
-        original.headers.Authorization = `Bearer ${data.access}`
-        return api(original)
-      } 
-      // catch {
-      //   localStorage.clear()
-      //   window.location.href = '/login'
-      // }
-    }
-    return Promise.reject(err)
-  }
-)
+// api.interceptors.response.use(
+//   res => res,
+//   async err => {
+//     const original = err.config
+//     if (err.response?.status === 401 && !original._retry) {
+//       original._retry = true
+//       try {
+//         const refresh = localStorage.getItem('pwd_refresh')
+//         const { data } = await axios.post('/api/auth/refresh/', { refresh })
+//         localStorage.setItem('pwd_access', data.access)
+//         original.headers.Authorization = `Bearer ${data.access}`
+//         return api(original)
+//       } 
+//       catch {
+//         localStorage.clear()
+//         window.location.href = '/login'
+//       }
+//     }
+//     return Promise.reject(err)
+//   }
+// )
 
 export default api
