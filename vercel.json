@@ -7,13 +7,7 @@
         },
         "backend": {
             "entrypoint": "backend",
-            "routePrefix": "/_/backend",
-            "rewrites": [
-                {
-                  "source": "/api/(.*)",
-                  "destination": "https://pwd-systems.vercel.app/api/$1"
-                }
-              ],
+            "routePrefix": "/api",
             "framework": "django"
         }
     }
