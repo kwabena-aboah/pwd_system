@@ -302,7 +302,7 @@ LOGGING = {
     "root": {"handlers": ["console"], "level": "WARNING"},
 }
 
-try:
-    from .local_settings import *
-except ImportError:
-    print("Local settings failed")
+# try:
+#     from .local_settings import *
+# except ImportError:
+#     print("Local settings failed")
