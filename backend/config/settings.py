@@ -11,7 +11,49 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = config("SECRET_KEY", default="django-insecure-change-me-in-production")
 DEBUG = config("DEBUG", default=False, cast=bool)
-ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1,.vercel.app", cast=Csv())
+# ── Security headers ──────────────────────────────────────────────────────────
+if DEBUG:
+    CSRF_COOKIE_SECURE = False
+    CORS_ALLOW_ALL_ORIGINS = False
+    CORS_ALLOW_CREDENTIALS = False
+    # CORS_REPLACE_HTTPS_REFERER = True
+    CSRF_COOKIE_SECURE = False
+    HOST_SCHEME = 'http://'
+    USE_X_FORWARDED_PORT = False
+    X_FRAME_OPTIONS = "ALLOW"
+    SECURE_CONTENT_TYPE_NOSNIFF = False
+    SECURE_BROWSER_XSS_FILTER = False
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+    SECURE_HSTS_PRELOAD = False
+    SECURE_PROXY_SSL_HEADER = None
+    SECURE_FRAME_DENY = False
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "http")
+    SESSION_COOKIE_SECURE = False
+    SECURE_SSL_REDIRECT = False
+    SESSION_COOKIE_SECURE = False
+else:
+    CSRF_COOKIE_SECURE = True
+    CORS_ALLOW_ALL_ORIGINS = True
+    CORS_ALLOW_CREDENTIALS = True
+    # CORS_REPLACE_HTTPS_REFERER = True
+    CSRF_COOKIE_SECURE = True
+    HOST_SCHEME = 'http://'
+    USE_X_FORWARDED_PORT = True
+    X_FRAME_OPTIONS = "DENY"
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_PROXY_SSL_HEADER = None
+    SECURE_FRAME_DENY = True
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SESSION_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+
+ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="https://pwd-systems.vercel.app", cast=Csv())
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -81,31 +123,37 @@ WSGI_APPLICATION = 'config.wsgi.application'
 #     }
 # }
 # ── Database ──────────────────────────────────────────────────────────────────
-DATABASE_URL = os.environ.get("DATABASE_URL")
+# DATABASE_URL = config("DATABASE_URL", default=None)
 
-if not DATABASE_URL:
-    raise Exception("DATABASE_URL is not set in environment variables")
+# if DATABASE_URL:
+#     DATABASES = {
+#         "default": dj_database_url.parse(
+#             DATABASE_URL,
+#             conn_max_age=600,
+#             conn_health_checks=True,
+#             ssl_require=True,
+#         )
+#     }
+# else:
+#     # Fallback for local development
+#     DATABASES = {
+#         "default": {
+#             "ENGINE": "django.db.backends.sqlite3",
+#             "NAME": BASE_DIR / "db.sqlite3",
+#         }
+#     }
+# ── Database ──────────────────────────────────────────────────────────────────
+DATABASE_URL = config("DATABASE_URL", default=None)
 
 DATABASES = {
-    "default": dj_database_url.parse(
-        DATABASE_URL or "db.sqlite3",
-        conn_max_age=600,
-        conn_health_checks=True,
-        ssl_require=bool(DATABASE_URL),  # only require SSL in production
-    )
+    'default': dj_database_url.config(DATABASE_URL)
 }
-# PostgreSQL (production)
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': config('DB_NAME'),
-#         'USER': config('DB_USER'),
-#         'PASSWORD': config('DB_PASSWORD'),
-#         'HOST': config('DB_HOST', default='localhost'),
-#         'PORT': config('DB_PORT', default='5432'),
-#     }
-# }
 
+db_from_env = dj_database_url.config(conn_max_age=500)
+
+DATABASES['default'].update(db_from_env)
+
+# ── Validators ──────────────────────────────────────────────────────────────────
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
@@ -153,21 +201,55 @@ SIMPLE_JWT = {
 }
 
 # CORS
-CORS_ALLOWED_ORIGINS = config(
-    'CORS_ALLOWED_ORIGINS',
-    default='https://*.vercel.app,http://127.0.0.1:5173'
-).split(',')
-CORS_ALLOW_CREDENTIALS = True
-CSRF_TRUSTED_ORIGINS = ["https://*.vercel.app"]
-CSRF_COOKIE_SECURE = True
+CORS_ALLOWED_ORIGINS = [
+    "http://127.0.0.1:5173",
+    "http://localhost:5173",
+    "https://pwd-systems.vercel.app"
+]
 
-# Channels
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {'hosts': [('127.0.0.1', 6379)]},
-    },
-}
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"https://.*\.vercel\.app",
+]
+
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://127.0.0.1:5173",
+    "http://localhost:5173",
+    "https://pwd-systems.vercel.app",
+]
+
+CSRF_TRUSTED_ORIGIN_REGEXES = [
+    r"https://.*\.vercel\.app",
+]
+
+REDIS_URL = config("REDIS_URL", default=None)
+
+if REDIS_URL:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {
+                "hosts": [REDIS_URL],
+            },
+        },
+    }
+else:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels.layers.InMemoryChannelLayer",
+        },
+    }
 
 # Celery
 CELERY_BROKER_URL = config('REDIS_URL', default='redis://localhost:6379/0')
@@ -195,18 +277,6 @@ SPECTACULAR_SETTINGS = {
     'VERSION': '1.0.0',
 }
 
-# ── Security headers ──────────────────────────────────────────────────────────
-SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-SECURE_SSL_REDIRECT = True
-SECURE_HSTS_SECONDS = 31536000
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_HSTS_PRELOAD = True
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
-X_FRAME_OPTIONS = "DENY"
-SECURE_CONTENT_TYPE_NOSNIFF = True
-SECURE_BROWSER_XSS_FILTER = True
-
 # Use S3 for media files in production
 # INSTALLED_APPS += ["storages"]
 # DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
@@ -231,3 +301,8 @@ LOGGING = {
     },
     "root": {"handlers": ["console"], "level": "WARNING"},
 }
+
+try:
+    from .local_settings import *
+except ImportError:
+    print("Local settings failed")
