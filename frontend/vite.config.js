@@ -92,12 +92,12 @@ export default defineConfig({
   server: isDev
     ? {
         proxy: {
-          '/_backend/api': {
+          '/api': {
             target: API_BASE,
             changeOrigin: true,
             secure: false,
           },
-          '/_backend/media': {
+          '/media': {
             target: API_BASE,
             changeOrigin: true,
             secure: false,
