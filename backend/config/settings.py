@@ -143,15 +143,11 @@ WSGI_APPLICATION = 'config.wsgi.application'
 #         }
 #     }
 # ── Database ──────────────────────────────────────────────────────────────────
-DATABASE_URL = config("DATABASE_URL", default=None)
+DATABASE_URL = config("DATABASE_URL")
 
 DATABASES = {
-    'default': dj_database_url.config(DATABASE_URL)
+    "default": dj_database_url.parse(DATABASE_URL)
 }
-
-db_from_env = dj_database_url.config(conn_max_age=500)
-
-DATABASES['default'].update(db_from_env)
 
 # ── Validators ──────────────────────────────────────────────────────────────────
 AUTH_PASSWORD_VALIDATORS = [
