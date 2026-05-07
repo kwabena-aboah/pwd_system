@@ -76,34 +76,34 @@ services:
   # ─────────────────────────────────────────────
   # Celery Worker
   # ─────────────────────────────────────────────
-  - type: worker
-    name: pwd-management-worker
-    runtime: python
-    rootDir: backend
-    plan: free
+  # - type: worker
+  #   name: pwd-management-worker
+  #   runtime: python
+  #   rootDir: backend
+  #   plan: free
 
-    buildCommand: |
-      pip install -r requirements.txt
+  #   buildCommand: |
+  #     pip install -r requirements.txt
 
-    startCommand: celery -A config worker -l info
+  #   startCommand: celery -A config worker -l info
 
-    envVars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: pwd-management-db
-          property: connectionString
+  #   envVars:
+  #     - key: DATABASE_URL
+  #       fromDatabase:
+  #         name: pwd-management-db
+  #         property: connectionString
 
-      # Add manually later
-      - key: REDIS_URL
-        sync: false
+  #     # Add manually later
+  #     - key: REDIS_URL
+  #       sync: false
 
-      - key: SECRET_KEY
-        sync: false
+  #     - key: SECRET_KEY
+  #       sync: false
 
-      - key: DEBUG
-        value: false
+  #     - key: DEBUG
+  #       value: false
 
-    autoDeploy: true
+  #   autoDeploy: true
 
 databases:
   - name: pwd-management-db

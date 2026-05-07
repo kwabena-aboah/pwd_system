@@ -70,7 +70,7 @@ INSTALLED_APPS = [
     'django_filters',
     'auditlog',
     # 'drf_spectacular',
-    'channels',
+    # 'channels',
     # Local apps
     'apps.accounts',
     'apps.pwds',
@@ -229,28 +229,28 @@ CSRF_TRUSTED_ORIGIN_REGEXES = [
     r"https://.*\.vercel\.app",
 ]
 
-REDIS_URL = config("REDIS_URL", default=None)
+# REDIS_URL = config("REDIS_URL", default=None)
 
-if REDIS_URL:
-    CHANNEL_LAYERS = {
-        "default": {
-            "BACKEND": "channels_redis.core.RedisChannelLayer",
-            "CONFIG": {
-                "hosts": [REDIS_URL],
-            },
-        },
-    }
-else:
-    CHANNEL_LAYERS = {
-        "default": {
-            "BACKEND": "channels.layers.InMemoryChannelLayer",
-        },
-    }
+# if REDIS_URL:
+#     CHANNEL_LAYERS = {
+#         "default": {
+#             "BACKEND": "channels_redis.core.RedisChannelLayer",
+#             "CONFIG": {
+#                 "hosts": [REDIS_URL],
+#             },
+#         },
+#     }
+# else:
+#     CHANNEL_LAYERS = {
+#         "default": {
+#             "BACKEND": "channels.layers.InMemoryChannelLayer",
+#         },
+#     }
 
-# Celery
-CELERY_BROKER_URL = config('REDIS_URL', default='redis://localhost:6379/0')
-CELERY_RESULT_BACKEND = config('REDIS_URL', default='redis://localhost:6379/0')
-CELERY_TIMEZONE = 'Africa/Accra'
+# # Celery
+# CELERY_BROKER_URL = config('REDIS_URL', default='redis://localhost:6379/0')
+# CELERY_RESULT_BACKEND = config('REDIS_URL', default='redis://localhost:6379/0')
+# CELERY_TIMEZONE = 'Africa/Accra'
 
 # Email
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
