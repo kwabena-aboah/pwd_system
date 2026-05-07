@@ -13,8 +13,7 @@ services:
       python manage.py collectstatic --noinput
       python manage.py migrate
 
-    startCommand: |
-      gunicorn config.wsgi:application
+    startCommand: gunicorn config.wsgi:application
 
     envVars:
       - key: PYTHON_VERSION
@@ -40,7 +39,6 @@ services:
           name: pwd-management-redis
           property: connectionString
 
-      # Frontend URL hosted on Render
       - key: CORS_ALLOWED_ORIGINS
         value: https://pwd-management-frontend.onrender.com
 
@@ -64,7 +62,7 @@ services:
       npm install
       npm run build
 
-    staticPublishPath: ./dist
+    staticPublishPath: dist
 
     routes:
       - type: rewrite
@@ -78,21 +76,6 @@ services:
     autoDeploy: true
 
   # ─────────────────────────────────────────────
-  # PostgreSQL Database
-  # ─────────────────────────────────────────────
-  - type: pserv
-    name: pwd-management-db
-    runtime: postgresql
-    plan: free
-
-  # ─────────────────────────────────────────────
-  # Redis
-  # ─────────────────────────────────────────────
-  - type: redis
-    name: pwd-management-redis
-    plan: free
-
-  # ─────────────────────────────────────────────
   # Celery Worker
   # ─────────────────────────────────────────────
   - type: worker
@@ -104,8 +87,7 @@ services:
     buildCommand: |
       pip install -r requirements.txt
 
-    startCommand: |
-      celery -A config worker -l info
+    startCommand: celery -A config worker -l info
 
     envVars:
       - key: DATABASE_URL
@@ -126,3 +108,19 @@ services:
         value: false
 
     autoDeploy: true
+
+databases:
+  # ─────────────────────────────────────────────
+  # PostgreSQL Database
+  # ─────────────────────────────────────────────
+  - name: pwd-management-db
+    databaseName: pwd_management
+    plan: free
+
+redis:
+  # ─────────────────────────────────────────────
+  # Redis
+  # ─────────────────────────────────────────────
+  - name: pwd-management-redis
+    plan: free
+    ipAllowList: []
