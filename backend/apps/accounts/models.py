@@ -4,6 +4,7 @@ accounts/models.py — Custom User with Roles
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
+create_superuser()
 
 class Role(models.TextChoices):
     SUPER_ADMIN = 'super_admin', 'Super Admin'
