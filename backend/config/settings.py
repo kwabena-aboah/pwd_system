@@ -143,8 +143,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 #         }
 #     }
 # ── Database ──────────────────────────────────────────────────────────────────
-# DATABASE_URL = config("DATABASE_URL")
-DATABASE_URL = "postgres://postgres.vlriajeoofykwoykcvqd:sFxKdsMisUJCpMSt@aws-1-us-east-1.pooler.supabase.com:5432/postgres?sslmode=require"
+DATABASE_URL = config("DATABASE_URL")
 
 DATABASES = {
     "default": dj_database_url.parse(DATABASE_URL)
