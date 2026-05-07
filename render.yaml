@@ -117,10 +117,10 @@ databases:
     databaseName: pwd_management
     plan: free
 
-redis:
-  # ─────────────────────────────────────────────
-  # Redis
-  # ─────────────────────────────────────────────
-  - name: pwd-management-redis
-    plan: free
-    ipAllowList: []
+# redis:
+#   # ─────────────────────────────────────────────
+#   # Redis
+#   # ─────────────────────────────────────────────
+#   - name: pwd-management-redis
+#     plan: free
+#     ipAllowList: []
