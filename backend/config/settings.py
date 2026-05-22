@@ -53,7 +53,7 @@ else:
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
 
-ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="https://pwd-systems.vercel.app", cast=Csv())
+ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="127.0.0.1", cast=Csv())
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -200,12 +200,12 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
     "http://localhost:5173",
-    "https://pwd-systems.vercel.app"
+    # "https://pwd-systems.vercel.app"
 ]
 
-CORS_ALLOWED_ORIGIN_REGEXES = [
-    r"https://.*\.vercel\.app",
-]
+# CORS_ALLOWED_ORIGIN_REGEXES = [
+#     r"https://.*\.vercel\.app",
+# ]
 
 CORS_ALLOW_HEADERS = [
     "accept",
@@ -222,12 +222,12 @@ CORS_ALLOW_HEADERS = [
 CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:5173",
     "http://localhost:5173",
-    "https://pwd-systems.vercel.app",
+    # "https://pwd-systems.vercel.app",
 ]
 
-CSRF_TRUSTED_ORIGIN_REGEXES = [
-    r"https://.*\.vercel\.app",
-]
+# CSRF_TRUSTED_ORIGIN_REGEXES = [
+#     r"https://.*\.vercel\.app",
+# ]
 
 # REDIS_URL = config("REDIS_URL", default=None)
 
@@ -298,7 +298,7 @@ LOGGING = {
     "root": {"handlers": ["console"], "level": "WARNING"},
 }
 
-# try:
-#     from .local_settings import *
-# except ImportError:
-#     print("Local settings failed")
+try:
+    from .local_settings import *
+except ImportError:
+    print("Local settings failed")

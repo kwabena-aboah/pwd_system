@@ -1,41 +1,64 @@
 <template>
   <div class="app-wrapper" :class="{ 'sidebar-collapsed': sidebarCollapsed }">
+
+    <!-- ① Overlay — always in DOM, visibility driven by class, NOT v-if -->
+    <div
+      class="sidebar-overlay"
+      :class="{ active: mobileOpen }"
+      @click="closeSidebar"
+      aria-hidden="true"
+    ></div>
+
     <!-- Offline Banner -->
     <div v-if="!offlineStore.isOnline" class="offline-banner">
       <i class="bi bi-wifi-off me-2"></i>
-      You are offline. Changes will sync when connection is restored.
+      <span class="d-none d-sm-inline">You are offline — changes will sync when connection is restored.</span>
+      <span class="d-sm-none">Offline</span>
       <span v-if="offlineStore.pendingCount > 0" class="badge bg-warning text-dark ms-2">
-        {{ offlineStore.pendingCount }} pending
+        {{ offlineStore.pendingCount }}
       </span>
     </div>
 
-    <!-- Sidebar -->
-    <nav class="sidebar" id="sidebar">
+    <!-- ② Sidebar — toggled with .sidebar-open class, never v-if -->
+    <nav class="sidebar" :class="{ 'sidebar-open': mobileOpen }" aria-label="Main navigation">
+
+      <!-- ③ Close button: always flex, visible only on mobile -->
+      <button class="sidebar-close-btn" @click="closeSidebar" aria-label="Close menu">
+        <i class="bi bi-x-lg"></i>
+      </button>
+
+      <!-- Brand -->
       <div class="sidebar-brand">
-        <img v-if="settings.logo" :src="settings.logo" alt="Logo" class="brand-logo">
+        <img
+          v-if="settingsStore.settings.logo_url"
+          :src="settingsStore.settings.logo_url"
+          alt="Logo"
+          class="brand-logo"
+        >
         <div v-else class="brand-icon">
           <i class="bi bi-heart-pulse-fill"></i>
         </div>
         <div class="brand-text">
-          <span class="brand-name">{{ settings.short_name }}</span>
-          <span class="brand-sub">{{ settings.district_name || 'PWD System' }}</span>
+          <span class="brand-name">{{ settingsStore.settings.short_name || 'PWDMS' }}</span>
+          <span class="brand-sub">{{ settingsStore.settings.district_name || 'PWD System' }}</span>
         </div>
       </div>
 
+      <!-- Nav links — ④ use router-link click handled in NavItem -->
       <div class="sidebar-content">
         <div class="sidebar-section">
           <span class="sidebar-label">Main</span>
-          <NavItem to="/dashboard" icon="bi-grid-fill" label="Dashboard" />
-          <NavItem to="/pwds" icon="bi-people-fill" label="PWD Records" badge-color="primary" />
-          <NavItem to="/album" icon="bi-journal-richtext" label="PWD Album" />
+          <NavItem to="/dashboard"   icon="bi-grid-fill"           label="Dashboard"   />
+          <NavItem to="/pwds"        icon="bi-people-fill"         label="PWD Records" />
+          <NavItem to="/album"       icon="bi-journal-richtext"    label="PWD Album"   />
         </div>
 
         <div class="sidebar-section">
           <span class="sidebar-label">Welfare</span>
-          <NavItem to="/partners" icon="bi-building-fill" label="Dev. Partners" />
-          <NavItem to="/benefits" icon="bi-gift-fill" label="Benefits" />
-          <NavItem to="/allocations" icon="bi-check2-circle" label="Allocations" />
-          <NavItem to="/complaints" icon="bi-chat-square-text-fill" label="Complaints" :badge="openComplaints" />
+          <NavItem to="/partners"    icon="bi-building-fill"       label="Dev. Partners" />
+          <NavItem to="/benefits"    icon="bi-gift-fill"           label="Benefits"      />
+          <NavItem to="/allocations" icon="bi-check2-circle"       label="Allocations"   />
+          <NavItem to="/complaints"  icon="bi-chat-square-text-fill" label="Complaints"  :badge="openComplaints" />
         </div>
 
         <div class="sidebar-section">
@@ -44,20 +67,21 @@
         </div>
 
         <div class="sidebar-section" v-if="auth.hasRole('super_admin', 'auditor')">
-          <span class="sidebar-label">Administration</span>
-          <NavItem to="/audit" icon="bi-shield-check" label="Audit Log" v-if="auth.hasRole('super_admin', 'auditor')" />
-          <NavItem to="/users" icon="bi-person-badge-fill" label="Users" v-if="auth.isAdmin" />
-          <NavItem to="/settings" icon="bi-gear-fill" label="Settings" v-if="auth.isAdmin" />
+          <span class="sidebar-label">Admin</span>
+          <NavItem to="/audit"    icon="bi-shield-check"      label="Audit Log" v-if="auth.hasRole('super_admin','auditor')" />
+          <NavItem to="/users"    icon="bi-person-badge-fill" label="Users"     v-if="auth.isAdmin" />
+          <NavItem to="/settings" icon="bi-gear-fill"         label="Settings"  v-if="auth.isAdmin" />
         </div>
       </div>
 
+      <!-- User footer -->
       <div class="sidebar-footer">
         <div class="user-card">
           <img v-if="auth.user?.profile_photo" :src="auth.user.profile_photo" class="user-avatar" alt="">
           <div v-else class="user-avatar-placeholder">{{ initials }}</div>
           <div class="user-info">
             <span class="user-name">{{ auth.user?.full_name }}</span>
-            <span class="user-role">{{ auth.user?.role?.replace('_', ' ') }}</span>
+            <span class="user-role">{{ auth.user?.role?.replace(/_/g, ' ') }}</span>
           </div>
         </div>
       </div>
@@ -65,61 +89,80 @@
 
     <!-- Main Content -->
     <div class="main-content">
-      <!-- Top Bar -->
       <header class="topbar">
-        <button class="btn-collapse" @click="sidebarCollapsed = !sidebarCollapsed">
+        <!-- ⑤ Hamburger — mobile only -->
+        <button class="btn-menu d-lg-none" @click="openSidebar" aria-label="Open menu">
           <i class="bi bi-list"></i>
+        </button>
+        <!-- Desktop collapse -->
+        <button class="btn-menu d-none d-lg-flex" @click="sidebarCollapsed = !sidebarCollapsed" aria-label="Toggle sidebar">
+          <i class="bi bi-layout-sidebar-inset"></i>
         </button>
 
         <div class="topbar-search">
           <i class="bi bi-search"></i>
-          <input type="text" placeholder="Quick search PWDs..." v-model="globalSearch"
-            @keyup.enter="doSearch" class="search-input">
+          <input
+            v-model="globalSearch"
+            type="text"
+            placeholder="Search PWDs…"
+            class="search-input"
+            @keyup.enter="doSearch"
+            aria-label="Search"
+          >
         </div>
 
         <div class="topbar-actions">
-          <!-- Sync indicator -->
-          <button v-if="offlineStore.pendingCount > 0" class="btn-icon" @click="offlineStore.sync()" title="Sync pending">
-            <i class="bi bi-arrow-repeat" :class="{ 'spin': offlineStore.isSyncing }"></i>
+          <button
+            v-if="offlineStore.pendingCount > 0"
+            class="btn-icon"
+            @click="offlineStore.sync()"
+            title="Sync pending changes"
+          >
+            <i class="bi bi-arrow-repeat" :class="{ spin: offlineStore.isSyncing }"></i>
             <span class="badge-dot warning">{{ offlineStore.pendingCount }}</span>
           </button>
 
-          <!-- Notifications -->
           <button class="btn-icon" @click="router.push('/notifications')" title="Notifications">
             <i class="bi bi-bell-fill"></i>
             <span v-if="unreadNotifications > 0" class="badge-dot danger">{{ unreadNotifications }}</span>
           </button>
 
-          <!-- User menu -->
+          <!-- ⑥ User menu — uses ref + clickaway watcher, no custom directive needed -->
           <div class="user-menu-wrapper" ref="userMenuRef">
             <button class="btn-icon user-btn" @click="userMenuOpen = !userMenuOpen">
-              <img v-if="auth.user?.profile_photo" :src="auth.user.profile_photo" class="topbar-avatar">
+              <img v-if="auth.user?.profile_photo" :src="auth.user.profile_photo" class="topbar-avatar" alt="">
               <div v-else class="topbar-avatar-placeholder">{{ initials }}</div>
-              <i class="bi bi-chevron-down ms-1"></i>
+              <i class="bi bi-chevron-down ms-1 d-none d-sm-inline"></i>
             </button>
-            <div class="user-dropdown" v-if="userMenuOpen">
-              <div class="dropdown-header">
-                <strong>{{ auth.user?.full_name }}</strong>
-                <small>{{ auth.user?.email }}</small>
+
+            <Transition name="dropdown">
+              <div v-if="userMenuOpen" class="user-dropdown">
+                <div class="dropdown-header">
+                  <strong>{{ auth.user?.full_name }}</strong>
+                  <small>{{ auth.user?.email }}</small>
+                </div>
+                <button
+                  v-if="auth.isAdmin"
+                  class="dropdown-item"
+                  @click="navigate('/settings')"
+                >
+                  <i class="bi bi-gear me-2"></i>Settings
+                </button>
+                <hr class="dropdown-divider m-0">
+                <button class="dropdown-item text-danger" @click="auth.logout()">
+                  <i class="bi bi-box-arrow-right me-2"></i>Logout
+                </button>
               </div>
-              <button class="dropdown-item" @click="router.push('/settings')">
-                <i class="bi bi-gear me-2"></i>Settings
-              </button>
-              <hr class="dropdown-divider">
-              <button class="dropdown-item text-danger" @click="auth.logout()">
-                <i class="bi bi-box-arrow-right me-2"></i>Logout
-              </button>
-            </div>
+            </Transition>
           </div>
         </div>
       </header>
 
-      <!-- Page Content -->
       <main class="page-content">
         <router-view v-slot="{ Component }">
-          <transition name="page-fade" mode="out-in">
+          <Transition name="page-fade" mode="out-in">
             <component :is="Component" />
-          </transition>
+          </Transition>
         </router-view>
       </main>
     </div>
@@ -127,24 +170,25 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
+import { useAuthStore }     from '@/stores/auth'
 import { useSettingsStore } from '@/stores/settings'
-import { useOfflineStore } from '@/stores/offline'
+import { useOfflineStore }  from '@/stores/offline'
 import NavItem from '@/components/NavItem.vue'
 import api from '@/services/api'
 
-const router = useRouter()
-const auth = useAuthStore()
+const router        = useRouter()
+const auth          = useAuthStore()
 const settingsStore = useSettingsStore()
-const offlineStore = useOfflineStore()
+const offlineStore  = useOfflineStore()
 
-const { settings } = settingsStore
-const sidebarCollapsed = ref(false)
-const globalSearch = ref('')
-const userMenuOpen = ref(false)
-const openComplaints = ref(0)
+const sidebarCollapsed   = ref(false)
+const mobileOpen         = ref(false)
+const globalSearch       = ref('')
+const userMenuOpen       = ref(false)
+const userMenuRef        = ref(null)
+const openComplaints     = ref(0)
 const unreadNotifications = ref(0)
 
 const initials = computed(() => {
@@ -153,170 +197,501 @@ const initials = computed(() => {
   return `${u.first_name?.[0] || ''}${u.last_name?.[0] || ''}`.toUpperCase()
 })
 
-function doSearch() {
-  if (globalSearch.value.trim()) {
-    router.push({ path: '/pwds', query: { search: globalSearch.value } })
+// ─── Sidebar helpers ─────────────────────────────────────────────────────────
+function openSidebar() {
+  mobileOpen.value = true
+  // ⑦ Lock body scroll so page doesn't scroll behind the overlay
+  document.body.style.overflow = 'hidden'
+}
+
+function closeSidebar() {
+  mobileOpen.value = false
+  document.body.style.overflow = ''
+}
+
+// Close sidebar on every route change (mobile nav tap)
+router.afterEach(() => {
+  if (window.innerWidth < 992) closeSidebar()
+})
+
+// ─── User-menu click-away (plain DOM listener, no custom directive) ───────────
+function handleDocumentClick(e) {
+  if (userMenuRef.value && !userMenuRef.value.contains(e.target)) {
+    userMenuOpen.value = false
   }
 }
 
+// ─── Keyboard shortcuts ───────────────────────────────────────────────────────
+function handleKeydown(e) {
+  if (e.key === 'Escape') {
+    closeSidebar()
+    userMenuOpen.value = false
+  }
+}
+
+// ─── Navigation helper (closes menus) ────────────────────────────────────────
+function navigate(path) {
+  userMenuOpen.value = false
+  router.push(path)
+}
+
+function doSearch() {
+  if (globalSearch.value.trim()) {
+    router.push({ path: '/pwds', query: { search: globalSearch.value } })
+    globalSearch.value = ''
+    closeSidebar()
+  }
+}
+
+// ─── Lifecycle ────────────────────────────────────────────────────────────────
 onMounted(async () => {
+  document.addEventListener('keydown', handleKeydown)
+  document.addEventListener('click',   handleDocumentClick, true)
+
   await settingsStore.fetchSettings()
   try {
     const [cmp, notif] = await Promise.all([
-      api.get('/complaints/?status=open&page_size=1'),
-      api.get('/notifications/?is_read=false&page_size=1'),
+      api.get('/complaints/', { params: { status: 'open',  page_size: 1 } }),
+      api.get('/notifications/', { params: { is_read: false, page_size: 1 } }),
     ])
-    openComplaints.value = cmp.data.count || 0
+    openComplaints.value     = cmp.data.count   || 0
     unreadNotifications.value = notif.data.count || 0
-  } catch {}
+  } catch { /* non-fatal */ }
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', handleKeydown)
+  document.removeEventListener('click',   handleDocumentClick, true)
+  document.body.style.overflow = ''
 })
 </script>
 
 <style lang="scss">
+/* ══════════════════════════════════════════════════════════════
+   CSS Custom Properties
+══════════════════════════════════════════════════════════════ */
 :root {
   --sidebar-width: 260px;
-  --sidebar-collapsed-width: 72px;
-  --topbar-height: 64px;
-  --system-primary: var(--bs-primary, #1a56db);
+  --sidebar-collapsed-width: 68px;
+  --topbar-height: 60px;
+  --system-primary: #1a56db;
   --system-secondary: #7e3af2;
-  --system-accent: #ff5a1f;
-  --sidebar-bg: #0f172a;
-  --sidebar-text: #94a3b8;
-  --sidebar-active: #ffffff;
-  --sidebar-active-bg: rgba(255,255,255,0.12);
-  --surface: #ffffff;
+  --system-accent:  #ff5a1f;
+  --sidebar-bg:     #0f172a;
+  --sidebar-text:   #94a3b8;
+  --surface:        #ffffff;
   --surface-secondary: #f8fafc;
-  --border: #e2e8f0;
-  --text-primary: #0f172a;
+  --border:  #e2e8f0;
+  --text-primary:   #0f172a;
   --text-secondary: #64748b;
-  --radius: 12px;
-  --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
-  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+  --radius:    12px;
+  --radius-sm:  8px;
+  --shadow:    0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.05);
+  --shadow-md: 0 4px 12px rgba(0,0,0,.10);
+  --shadow-lg: 0 10px 30px rgba(0,0,0,.14);
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--surface-secondary); color: var(--text-primary); }
+/* ══════════════════════════════════════════════════════════════
+   Base Reset
+══════════════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--surface-secondary);
+  color: var(--text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
 
+/* ══════════════════════════════════════════════════════════════
+   App shell
+══════════════════════════════════════════════════════════════ */
 .app-wrapper {
- /* display: flex; */
+  display: flex;
   min-height: 100vh;
+  position: relative;
 }
 
-/* Offline Banner */
+/* ══════════════════════════════════════════════════════════════
+   Offline banner
+══════════════════════════════════════════════════════════════ */
 .offline-banner {
   position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
   background: #dc2626; color: white;
-  padding: 8px 20px; text-align: center; font-size: 0.875rem; font-weight: 500;
+  padding: 7px 20px; text-align: center;
+  font-size: .82rem; font-weight: 500;
 }
 
-/* Sidebar */
+/* ══════════════════════════════════════════════════════════════
+   Sidebar Overlay
+   Always rendered in the DOM; shown/hidden with .active class.
+   This avoids v-if/v-show conflicts and lets CSS transitions work.
+══════════════════════════════════════════════════════════════ */
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 299;            /* below sidebar (300), above content */
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(2px);
+  /* hidden by default */
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .28s ease;
+}
+.sidebar-overlay.active {
+  opacity: 1;
+  pointer-events: auto;    /* clickable only when visible */
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Sidebar
+══════════════════════════════════════════════════════════════ */
 .sidebar {
   width: var(--sidebar-width);
-  min-height: 100vh;
+  height: 100vh;
   background: var(--sidebar-bg);
-  display: flex; flex-direction: column;
-  position: fixed; left: 0; top: 0; bottom: 0; z-index: 100;
-  transition: width 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  left: 0; top: 0;
+  z-index: 300;
   overflow: hidden;
+  /* smooth desktop width collapse */
+  transition: width .25s cubic-bezier(.4,0,.2,1);
 }
 
-.app-wrapper.sidebar-collapsed .sidebar { width: var(--sidebar-collapsed-width); }
-.app-wrapper.sidebar-collapsed .main-content { margin-left: var(--sidebar-collapsed-width); }
+/* ── Close button (mobile only) ─────────────────────────────── */
+.sidebar-close-btn {
+  /* always flex so icon centres; hidden on desktop via display:none */
+  display: none;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  top: 14px; right: 14px;
+  width: 32px; height: 32px;
+  background: rgba(255,255,255,.10);
+  border: none;
+  border-radius: 8px;
+  color: #e2e8f0;
+  font-size: 1rem;
+  cursor: pointer;
+  z-index: 1;
+  transition: background .15s;
+}
+.sidebar-close-btn:hover { background: rgba(255,255,255,.18); }
 
+/* ── Brand ──────────────────────────────────────────────────── */
 .sidebar-brand {
-  display: flex; align-items: center; gap: 12px;
-  padding: 20px 16px; border-bottom: 1px solid rgba(255,255,255,0.08);
-  min-height: 72px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 16px;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+  min-height: 68px;
+  flex-shrink: 0;
 }
-.brand-logo { width: 40px; height: 40px; object-fit: contain; border-radius: 8px; flex-shrink: 0; }
-.brand-icon {
-  width: 40px; height: 40px; border-radius: 10px;
-  background: var(--system-primary, #1a56db);
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-  font-size: 1.2rem; color: white;
+.brand-logo  { width: 38px; height: 38px; object-fit: contain; border-radius: 8px; flex-shrink: 0; }
+.brand-icon  {
+  width: 38px; height: 38px; border-radius: 10px;
+  background: var(--system-primary);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; font-size: 1.15rem; color: white;
 }
-.brand-text { overflow: hidden; }
-.brand-name { display: block; color: white; font-weight: 700; font-size: 0.95rem; white-space: nowrap; }
-.brand-sub { display: block; color: var(--sidebar-text); font-size: 0.72rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.brand-text  { overflow: hidden; min-width: 0; }
+.brand-name  { display: block; color: white; font-weight: 700; font-size: .92rem; white-space: nowrap; }
+.brand-sub   {
+  display: block; color: var(--sidebar-text); font-size: .70rem;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 
-.sidebar-content { flex: 1; overflow-y: auto; padding: 12px 0; }
-.sidebar-section { margin-bottom: 8px; }
+/* ── Nav content ────────────────────────────────────────────── */
+.sidebar-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 10px 0;
+}
+.sidebar-content::-webkit-scrollbar { width: 4px; }
+.sidebar-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 2px; }
+
+.sidebar-section { margin-bottom: 4px; }
 .sidebar-label {
-  display: block; padding: 8px 20px 4px;
-  font-size: 0.65rem; font-weight: 700; letter-spacing: 0.08em;
-  text-transform: uppercase; color: rgba(148,163,184,0.6);
+  display: block;
+  padding: 8px 18px 4px;
+  font-size: .62rem; font-weight: 700; letter-spacing: .10em;
+  text-transform: uppercase;
+  color: rgba(148,163,184,.50);
   white-space: nowrap;
 }
 
+/* ── Footer ─────────────────────────────────────────────────── */
 .sidebar-footer {
-  padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.08);
+  padding: 12px 14px;
+  border-top: 1px solid rgba(255,255,255,.07);
+  flex-shrink: 0;
 }
-.user-card { display: flex; align-items: center; gap: 10px; }
-.user-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.user-card { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.user-avatar            { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
 .user-avatar-placeholder {
-  width: 36px; height: 36px; border-radius: 50%; background: var(--system-primary, #1a56db);
+  width: 34px; height: 34px; border-radius: 50%;
+  background: var(--system-primary);
   display: flex; align-items: center; justify-content: center;
-  color: white; font-weight: 700; font-size: 0.8rem; flex-shrink: 0;
+  color: white; font-weight: 700; font-size: .78rem; flex-shrink: 0;
 }
-.user-info { overflow: hidden; }
-.user-name { display: block; color: white; font-size: 0.82rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.user-role { display: block; color: var(--sidebar-text); font-size: 0.7rem; text-transform: capitalize; white-space: nowrap; }
+.user-info { overflow: hidden; min-width: 0; }
+.user-name {
+  display: block; color: white; font-size: .80rem; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.user-role {
+  display: block; color: var(--sidebar-text); font-size: .68rem;
+  text-transform: capitalize; white-space: nowrap;
+}
 
-/* Main */
-.main-content { margin-left: var(--sidebar-width); min-height: 100vh; display: flex; flex-direction: column; transition: margin-left 0.25s ease; }
+/* ══════════════════════════════════════════════════════════════
+   Desktop sidebar-collapsed state
+══════════════════════════════════════════════════════════════ */
+.app-wrapper.sidebar-collapsed .sidebar { width: var(--sidebar-collapsed-width); }
+.app-wrapper.sidebar-collapsed .main-content { margin-left: var(--sidebar-collapsed-width) !important; }
+.app-wrapper.sidebar-collapsed .brand-text,
+.app-wrapper.sidebar-collapsed .sidebar-label,
+.app-wrapper.sidebar-collapsed .user-info  { display: none; }
+.app-wrapper.sidebar-collapsed .sidebar-brand { padding: 16px 14px; justify-content: center; }
+.app-wrapper.sidebar-collapsed .sidebar-footer { padding: 12px 10px; }
+.app-wrapper.sidebar-collapsed .user-card { justify-content: center; }
 
-/* Topbar */
+/* ══════════════════════════════════════════════════════════════
+   Main content area
+══════════════════════════════════════════════════════════════ */
+.main-content {
+  /* default: offset by sidebar */
+  margin-left: var(--sidebar-width);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  transition: margin-left .25s cubic-bezier(.4,0,.2,1);
+  min-width: 0;
+  /* prevent content from going under a fixed sidebar on mobile */
+  width: 100%;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Topbar
+══════════════════════════════════════════════════════════════ */
 .topbar {
-  height: var(--topbar-height); background: white; border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; gap: 16px; padding: 0 24px;
+  height: var(--topbar-height);
+  background: white;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 18px 0 16px;
   position: sticky; top: 0; z-index: 50;
-  box-shadow: 0 1px 0 rgba(0,0,0,0.06);
+  box-shadow: 0 1px 0 rgba(0,0,0,.05);
+  flex-shrink: 0;
 }
-.btn-collapse { background: none; border: none; font-size: 1.4rem; cursor: pointer; color: var(--text-secondary); padding: 4px 8px; border-radius: 8px; }
-.btn-collapse:hover { background: var(--surface-secondary); }
-.topbar-search { flex: 1; max-width: 360px; position: relative; }
-.topbar-search i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); }
-.search-input { width: 100%; padding: 8px 12px 8px 36px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-secondary); font-size: 0.875rem; outline: none; }
-.search-input:focus { border-color: var(--system-primary, #1a56db); background: white; }
-.topbar-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
-.btn-icon { background: none; border: none; width: 40px; height: 40px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: var(--text-secondary); position: relative; }
-.btn-icon:hover { background: var(--surface-secondary); color: var(--text-primary); }
-.badge-dot { position: absolute; top: 4px; right: 4px; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; font-weight: 700; color: white; }
-.badge-dot.warning { background: #f59e0b; }
-.badge-dot.danger { background: #ef4444; }
-.topbar-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
-.topbar-avatar-placeholder { width: 32px; height: 32px; border-radius: 50%; background: var(--system-primary, #1a56db); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 0.75rem; }
-.user-btn { width: auto; padding: 4px 8px; gap: 6px; }
 
+.btn-menu {
+  background: none; border: none;
+  font-size: 1.35rem; cursor: pointer;
+  color: var(--text-secondary);
+  width: 40px; height: 40px;
+  border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: background .14s, color .14s;
+}
+.btn-menu:hover { background: var(--surface-secondary); color: var(--text-primary); }
+
+.topbar-search {
+  flex: 1; max-width: 340px; position: relative; min-width: 0;
+}
+.topbar-search i {
+  position: absolute; left: 11px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-secondary); font-size: .9rem; pointer-events: none;
+}
+.search-input {
+  width: 100%;
+  padding: 7px 12px 7px 34px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-secondary);
+  font-size: .855rem; outline: none;
+  color: var(--text-primary);
+  transition: border-color .15s, background .15s, box-shadow .15s;
+}
+.search-input:focus {
+  border-color: var(--system-primary);
+  background: white;
+  box-shadow: 0 0 0 3px rgba(26,86,219,.10);
+}
+.search-input::placeholder { color: var(--text-secondary); }
+
+.topbar-actions { display: flex; align-items: center; gap: 6px; margin-left: auto; flex-shrink: 0; }
+
+.btn-icon {
+  background: none; border: none;
+  width: 38px; height: 38px; border-radius: var(--radius-sm);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 1.05rem; color: var(--text-secondary); position: relative;
+  transition: background .14s, color .14s;
+}
+.btn-icon:hover { background: var(--surface-secondary); color: var(--text-primary); }
+
+.badge-dot {
+  position: absolute; top: 3px; right: 3px;
+  min-width: 16px; height: 16px; padding: 0 3px;
+  border-radius: 8px; font-size: .58rem; font-weight: 700;
+  color: white; display: flex; align-items: center; justify-content: center;
+  border: 2px solid white;
+}
+.badge-dot.warning { background: #f59e0b; }
+.badge-dot.danger  { background: #ef4444; }
+
+.topbar-avatar            { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; }
+.topbar-avatar-placeholder {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--system-primary);
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-weight: 700; font-size: .72rem;
+}
+.user-btn { width: auto; padding: 4px 8px; gap: 6px; border-radius: 8px; }
+
+/* User dropdown */
 .user-menu-wrapper { position: relative; }
 .user-dropdown {
-  position: absolute; right: 0; top: 48px; width: 220px;
+  position: absolute; right: 0; top: calc(100% + 8px); width: 210px;
   background: white; border: 1px solid var(--border); border-radius: var(--radius);
-  box-shadow: var(--shadow-lg); padding: 8px 0; z-index: 100;
+  box-shadow: var(--shadow-lg); padding: 6px 0; z-index: 1000;
 }
-.dropdown-header { padding: 10px 16px 8px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
-.dropdown-header strong { display: block; font-size: 0.875rem; }
-.dropdown-header small { color: var(--text-secondary); font-size: 0.75rem; }
-.dropdown-item { display: flex; align-items: center; width: 100%; padding: 8px 16px; background: none; border: none; font-size: 0.875rem; cursor: pointer; color: var(--text-primary); text-align: left; }
+.dropdown-enter-active, .dropdown-leave-active { transition: opacity .15s, transform .15s; }
+.dropdown-enter-from, .dropdown-leave-to { opacity: 0; transform: translateY(-6px); }
+
+.dropdown-header {
+  padding: 10px 14px 8px;
+  border-bottom: 1px solid var(--border); margin-bottom: 4px;
+}
+.dropdown-header strong { display: block; font-size: .85rem; }
+.dropdown-header small  { color: var(--text-secondary); font-size: .73rem; }
+.dropdown-item {
+  display: flex; align-items: center; width: 100%;
+  padding: 9px 14px; background: none; border: none;
+  font-size: .85rem; cursor: pointer; color: var(--text-primary);
+  text-align: left; transition: background .12s;
+}
 .dropdown-item:hover { background: var(--surface-secondary); }
-.dropdown-divider { border-color: var(--border); margin: 4px 0; }
+.dropdown-divider { border-color: var(--border); }
 
-/* Page content */
-.page-content { flex: 1; padding: 28px 28px; }
+/* ══════════════════════════════════════════════════════════════
+   Page content
+══════════════════════════════════════════════════════════════ */
+.page-content { flex: 1; padding: 24px; overflow-x: hidden; }
 
-/* Transitions */
-.page-fade-enter-active, .page-fade-leave-active { transition: opacity 0.2s, transform 0.2s; }
-.page-fade-enter-from { opacity: 0; transform: translateY(8px); }
-.page-fade-leave-to { opacity: 0; }
+/* Page transitions */
+.page-fade-enter-active, .page-fade-leave-active { transition: opacity .18s, transform .18s; }
+.page-fade-enter-from { opacity: 0; transform: translateY(6px); }
+.page-fade-leave-to   { opacity: 0; }
 
-.spin { animation: spin 1s linear infinite; }
+/* Spinner */
+.spin { animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-@media (max-width: 768px) {
-  .sidebar { transform: translateX(-100%); }
-  .sidebar.show { transform: translateX(0); }
-  .main-content { margin-left: 0; }
-  .app-wrapper.sidebar-collapsed .main-content { margin-left: 0; }
+/* ══════════════════════════════════════════════════════════════
+   RESPONSIVE — Mobile (< 992px)
+   On mobile the sidebar slides in from the left over the content.
+   The main-content spans the full viewport width.
+══════════════════════════════════════════════════════════════ */
+@media (max-width: 991.98px) {
+  /* ① Remove the left margin — sidebar floats above content */
+  .main-content {
+    margin-left: 0 !important;
+    width: 100%;
+  }
+
+  /* ② Sidebar starts off-screen to the left */
+  .sidebar {
+    transform: translateX(-100%);
+    transition:
+      transform .30s cubic-bezier(.4,0,.2,1),
+      box-shadow .30s ease;
+    /* keep width at full 260px — not collapsed on mobile */
+    width: var(--sidebar-width) !important;
+  }
+
+  /* ③ Slide sidebar in when .sidebar-open is added */
+  .sidebar.sidebar-open {
+    transform: translateX(0);
+    box-shadow: 4px 0 32px rgba(0,0,0,.25);
+  }
+
+  /* ④ Show the close button */
+  .sidebar-close-btn { display: flex; }
+
+  /* ⑤ Never show desktop collapse button */
+  .btn-menu.d-lg-none { display: flex !important; }
+
+  .topbar-search { max-width: 200px; }
+  .page-content  { padding: 14px; }
 }
+
+@media (max-width: 575.98px) {
+  .topbar { padding: 0 10px; gap: 6px; }
+  .topbar-search { max-width: 150px; }
+  .search-input  { font-size: .78rem; padding: 6px 8px 6px 28px; }
+  .page-content  { padding: 10px; }
+  .topbar-actions { gap: 2px; }
+}
+
+@media (max-width: 380px) {
+  /* Hide search bar entirely on very small screens */
+  .topbar-search { display: none; }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Large desktop (≥ 1400px)
+══════════════════════════════════════════════════════════════ */
+@media (min-width: 1400px) {
+  :root { --sidebar-width: 272px; }
+  .page-content { padding: 28px 32px; }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Global reusable classes (used across child views)
+══════════════════════════════════════════════════════════════ */
+.page-header {
+  display: flex; align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 24px; gap: 12px; flex-wrap: wrap;
+}
+.page-title    { font-size: clamp(1.25rem, 3vw, 1.75rem); font-weight: 800; line-height: 1.2; }
+.page-subtitle { color: var(--text-secondary); font-size: .875rem; margin-top: 3px; }
+
+.table-card { background: white; border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+.table-card .table thead th {
+  background: var(--surface-secondary);
+  font-size: .72rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .05em;
+  color: var(--text-secondary); border-bottom: 1px solid var(--border);
+  padding: 11px 14px; white-space: nowrap;
+}
+.table-card .table tbody td { padding: 11px 14px; font-size: .855rem; vertical-align: middle; }
+.table-card .table tbody tr:hover { background: #fafbff; }
+
+.table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+.pagination-bar {
+  display: flex; align-items: center; justify-content: center;
+  gap: 14px; padding: 14px 16px; border-top: 1px solid var(--border); flex-wrap: wrap;
+}
+.page-info { font-size: .835rem; color: var(--text-secondary); }
+
+.empty-state {
+  text-align: center; padding: 56px 20px;
+  color: var(--text-secondary); background: white;
+  border-radius: var(--radius); box-shadow: var(--shadow);
+}
+.empty-state i { font-size: 2.8rem; display: block; margin-bottom: 12px; opacity: .5; }
+.empty-state p { margin-bottom: 16px; }
 </style>
