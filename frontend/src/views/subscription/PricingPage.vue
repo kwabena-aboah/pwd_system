@@ -214,7 +214,7 @@
           <a href="#">Privacy Policy</a>
           <a href="#">Terms of Service</a>
         </div>
-        <p class="footer-copy">© {{ new Date().getFullYear() }} Sikaba Systems. Built for Ghana.</p>
+        <p class="footer-copy">© {{ new Date().getFullYear() }} Sikaba Systems. Built for Africa.</p>
       </div>
     </footer>
 
