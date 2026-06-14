@@ -58,13 +58,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/services/api'
 
 const router = useRouter()
-const route = useRoute()
 const auth = useAuthStore()
 
 const form = ref({ email: '', password: '' })
@@ -75,55 +74,27 @@ const showPwd = ref(false)
 const systemName = ref('PWD Management System')
 const logoUrl = ref(null)
 
-// 🔥 Handle redirect if already logged in (reactive-safe)
-watch(
-  () => auth.isAuthenticated,
-  (isAuth) => {
-    if (isAuth) {
-      router.push(route.query.redirect || '/dashboard')
-    }
-  },
-  { immediate: true }
-)
-
 onMounted(async () => {
+  if (auth.isAuthenticated) { router.push('/dashboard'); return }
   try {
     const { data } = await api.get('/settings/')
     systemName.value = data.system_name || 'PWD Management System'
     logoUrl.value = data.logo_url || null
-
     if (data.primary_color) {
-      document.documentElement.style.setProperty(
-        '--system-primary',
-        data.primary_color
-      )
+      document.documentElement.style.setProperty('--system-primary', data.primary_color)
     }
-  } catch (err) {
-    // Optional: log in dev only
-    if (import.meta.env.DEV) console.warn('Settings load failed', err)
-  }
+  } catch {}
 })
 
 async function handleLogin() {
-  if (loading.value) return // 🔥 prevent double submit
-
   loading.value = true
   errorMsg.value = ''
   hasError.value = false
-
   try {
     await auth.login(form.value.email, form.value.password)
-
-    router.push(route.query.redirect || '/dashboard')
+    router.push('/dashboard')
   } catch (err) {
-    const res = err.response?.data
-
-    errorMsg.value =
-      res?.detail ||
-      res?.message ||
-      res?.error ||
-      'Invalid email or password. Please try again.'
-
+    errorMsg.value = err.response?.data?.detail || 'Invalid email or password. Please try again.'
     hasError.value = true
   } finally {
     loading.value = false

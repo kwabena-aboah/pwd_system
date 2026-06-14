@@ -133,41 +133,24 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useSettingsStore } from '@/stores/settings'
 
 const settingsStore = useSettingsStore()
-
 const saving = ref(false)
 const saved = ref(false)
-const error = ref(null)
-
 const currentLogoUrl = ref(null)
 const logoFile = ref(null)
 const logo2File = ref(null)
 
-let objectUrl = null // for cleanup
-
 const form = ref({
-  system_name: '',
-  short_name: '',
-  district_name: '',
-  region: '',
-  primary_color: '#1a56db',
-  secondary_color: '#7e3af2',
-  accent_color: '#ff5a1f',
-  text_on_primary: '#ffffff',
-  album_title: '',
-  album_subtitle: '',
-  album_photos_per_page: 12,
-  album_show_reg_number: true,
-  album_show_disability: true,
-  album_show_community: true,
-  album_show_phone: false,
-  contact_email: '',
-  contact_phone: '',
-  address: '',
-  website: '',
+  system_name: '', short_name: '', district_name: '', region: '',
+  primary_color: '#1a56db', secondary_color: '#7e3af2',
+  accent_color: '#ff5a1f', text_on_primary: '#ffffff',
+  album_title: '', album_subtitle: '', album_photos_per_page: 12,
+  album_show_reg_number: true, album_show_disability: true,
+  album_show_community: true, album_show_phone: false,
+  contact_email: '', contact_phone: '', address: '', website: '',
 })
 
 const colorFields = [
@@ -185,7 +168,7 @@ const toggleFields = [
 ]
 
 const themes = [
-  { name: 'Blue', primary: '#1a56db', secondary: '#7e3af2', accent: '#ff5a1f' },
+  { name: 'Blue (Default)', primary: '#1a56db', secondary: '#7e3af2', accent: '#ff5a1f' },
   { name: 'Green', primary: '#059669', secondary: '#0284c7', accent: '#f59e0b' },
   { name: 'Purple', primary: '#7c3aed', secondary: '#db2777', accent: '#f97316' },
   { name: 'Red', primary: '#dc2626', secondary: '#ea580c', accent: '#16a34a' },
@@ -194,105 +177,35 @@ const themes = [
   { name: 'Ghana Gold', primary: '#c8a214', secondary: '#006b3c', accent: '#ce1126' },
 ]
 
-// Apply theme
 function applyTheme(t) {
   form.value.primary_color = t.primary
   form.value.secondary_color = t.secondary
   form.value.accent_color = t.accent
 }
 
-// Logo handlers
 function onLogo(e) {
-  const file = e.target.files[0]
-  if (!file) return
-
-  // revoke old preview
-  if (objectUrl) URL.revokeObjectURL(objectUrl)
-
-  logoFile.value = file
-  objectUrl = URL.createObjectURL(file)
-  currentLogoUrl.value = objectUrl
+  logoFile.value = e.target.files[0]
+  currentLogoUrl.value = URL.createObjectURL(logoFile.value)
 }
+function onLogo2(e) { logo2File.value = e.target.files[0] }
 
-function onLogo2(e) {
-  const file = e.target.files[0]
-  if (!file) return
-  logo2File.value = file
-}
-
-// Basic validation (keep it simple but useful)
-function validate() {
-  if (!form.value.system_name) return 'System name is required'
-  if (!form.value.district_name) return 'District name is required'
-  if (form.value.contact_email && !form.value.contact_email.includes('@')) {
-    return 'Invalid email address'
-  }
-  return null
-}
-
-// Save
 async function saveSettings() {
-  error.value = validate()
-  if (error.value) {
-    alert(error.value)
-    return
-  }
-
   saving.value = true
-  error.value = null
-
+  const fd = new FormData()
+  Object.entries(form.value).forEach(([k, v]) => fd.append(k, v))
+  if (logoFile.value) fd.append('logo', logoFile.value)
+  if (logo2File.value) fd.append('logo_secondary', logo2File.value)
   try {
-    const fd = new FormData()
-
-    Object.entries(form.value).forEach(([k, v]) => {
-      // Convert booleans properly for DRF
-      if (typeof v === 'boolean') {
-        fd.append(k, v ? 'true' : 'false')
-      } else if (v !== null && v !== '') {
-        fd.append(k, v)
-      }
-    })
-
-    if (logoFile.value) fd.append('logo', logoFile.value)
-    if (logo2File.value) fd.append('logo_secondary', logo2File.value)
-
     await settingsStore.updateSettings(fd)
-
     saved.value = true
-    setTimeout(() => (saved.value = false), 3000)
-
-  } catch (err) {
-    console.error(err)
-    error.value = 'Failed to save settings'
-    alert(error.value)
-  } finally {
-    saving.value = false
-  }
+    setTimeout(() => { saved.value = false }, 3000)
+  } finally { saving.value = false }
 }
 
-// Load
 onMounted(async () => {
-  try {
-    await settingsStore.fetchSettings()
-
-    if (settingsStore.settings) {
-      Object.keys(form.value).forEach(key => {
-        if (settingsStore.settings[key] !== undefined) {
-          form.value[key] = settingsStore.settings[key]
-        }
-      })
-
-      currentLogoUrl.value = settingsStore.settings.logo_url || null
-    }
-  } catch (err) {
-    console.error(err)
-    error.value = 'Failed to load settings'
-  }
-})
-
-// Cleanup (important)
-onBeforeUnmount(() => {
-  if (objectUrl) URL.revokeObjectURL(objectUrl)
+  await settingsStore.fetchSettings()
+  Object.assign(form.value, settingsStore.settings)
+  currentLogoUrl.value = settingsStore.settings.logo_url || null
 })
 </script>
 

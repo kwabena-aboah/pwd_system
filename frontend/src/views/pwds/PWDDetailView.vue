@@ -100,9 +100,7 @@
       <div v-if="!pwd.medical_records?.length" class="empty-state">
         <i class="bi bi-clipboard2-pulse"></i>
         <p>No medical record added yet.</p>
-        <button class="btn btn-primary btn-sm" v-if="auth.canEdit" @click="openMedicalModal">
-          Add Medical Record
-        </button>
+        <button class="btn btn-primary btn-sm" v-if="auth.canEdit">Add Medical Record</button>
       </div>
       <div v-else class="info-grid" v-for="med in pwd.medical_records" :key="med.id">
         <InfoCard title="Disability Details" icon="bi-accessibility">
@@ -118,102 +116,6 @@
           <InfoRow label="Last Checkup" :value="med.last_medical_checkup || '—'" />
           <InfoRow label="Hospital/Facility" :value="med.hospital_facility || '—'" />
         </InfoCard>
-      </div>
-    </div>
-
-    <!-- Add Medical Record Modal -->
-    <div class="modal fade" id="medicalModal" tabindex="-1">
-      <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content">
-          
-          <div class="modal-header">
-            <h5 class="modal-title">Add Medical Record</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-          </div>
-
-          <div class="modal-body">
-            <div class="row g-3">
-
-              <div class="col-6">
-                <label class="form-label">Disability Types</label>
-                <select v-model="medicalForm.disability_type_ids" multiple class="form-select">
-                  <option v-for="d in disabilityTypes" :key="d.id" :value="d.id">
-                    {{ d.name }}
-                  </option>
-                </select>
-              </div>
-
-              <div class="col-6">
-                <label class="form-label">Severity</label>
-                <select v-model="medicalForm.disability_severity" class="form-select">
-                  <option value="mild">Mild</option>
-                  <option value="moderate">Moderate</option>
-                  <option value="severe">Severe</option>
-                  <option value="profound">Profound</option>
-                </select>
-              </div>
-
-              <div class="col-6">
-                <label class="form-label">Onset</label>
-                <select v-model="medicalForm.disability_onset" class="form-select">
-                  <option value="congenital">Congenital (From Birth)</option>
-                  <option value="acquired">Acquired</option>
-                  <option value="progressive">Progressive</option>
-                </select>
-              </div>
-
-              <div class="col-6">
-                <label class="form-label">Cause</label>
-                <textarea v-model="medicalForm.cause_of_disability" class="form-control" rows="3"></textarea>
-              </div>
-
-              <div class="col-6">
-                <label class="form-label">Assistive Device</label>
-                <select v-model="medicalForm.has_assistive_device" class="form-select">
-                  <option :value="true">Yes</option>
-                  <option :value="false">No</option>
-                </select>
-              </div>
-
-              <div class="col-6">
-                <label class="form-label">Device Type</label>
-                <input v-model="medicalForm.assistive_device_type" class="form-control">
-              </div>
-
-              <div class="col-6">
-                <label class="form-label">Health Insurance</label>
-                <select v-model="medicalForm.health_insurance" class="form-select">
-                  <option :value="true">Yes</option>
-                  <option :value="false">No</option>
-                </select>
-              </div>
-
-              <div class="col-6">
-                <label class="form-label">NHIS Number</label>
-                <input v-model="medicalForm.nhis_number" class="form-control">
-              </div>
-
-              <div class="col-6">
-                <label class="form-label">Last Checkup</label>
-                <input v-model="medicalForm.last_medical_checkup" type="date" class="form-control">
-              </div>
-
-              <div class="col-6">
-                <label class="form-label">Facility</label>
-                <input v-model="medicalForm.hospital_facility" class="form-control">
-              </div>
-
-            </div>
-          </div>
-
-          <div class="modal-footer">
-            <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-            <button class="btn btn-primary" @click="createMedicalRecord" :disabled="medLoading">
-              {{ medLoading ? 'Saving...' : 'Save Record' }}
-            </button>
-          </div>
-
-        </div>
       </div>
     </div>
 
@@ -322,7 +224,6 @@ import { useAuthStore } from '@/stores/auth'
 import api from '@/services/api'
 import InfoCard from '@/components/InfoCard.vue'
 import InfoRow from '@/components/InfoRow.vue'
-import * as bootstrap from 'bootstrap'
 
 const router = useRouter()
 const route = useRoute()
@@ -347,27 +248,6 @@ const riskBadge = l => ({ low:'bg-success-subtle text-success', medium:'bg-warni
 const allocBadge = s => ({ disbursed:'bg-success-subtle text-success', approved:'bg-info-subtle text-info', pending:'bg-warning-subtle text-warning', rejected:'bg-danger-subtle text-danger' }[s] || 'bg-secondary-subtle text-secondary')
 const priorityBadge = p => ({ low:'bg-secondary-subtle text-secondary', medium:'bg-warning-subtle text-warning', high:'bg-danger-subtle text-danger', urgent:'bg-danger text-white' }[p] || '')
 
-const disabilityTypes = ref([])
-const medLoading = ref(false)
-
-const defaultMedicalForm = () => ({
-  pwd: null,
-  disability_type_ids: [], // ✅ MUST be array
-  disability_severity: '',
-  disability_onset: '',
-  cause_of_disability: '',
-  has_assistive_device: false,
-  assistive_device_type: '',
-  health_insurance: false,
-  nhis_number: '',
-  last_medical_checkup: '',
-  hospital_facility: ''
-})
-
-const medicalForm = ref(defaultMedicalForm())
-
-let medicalModal = null
-
 async function loadPWD() {
   const { data } = await api.get(`/pwds/${route.params.id}/`)
   pwd.value = data
@@ -377,52 +257,6 @@ async function loadPWD() {
   ])
   allocations.value = ab.data.results ?? ab.data
   complaints.value = cb.data.results ?? cb.data
-}
-
-// Open modal
-const openMedicalModal = async () => {
-  medicalForm.value = defaultMedicalForm()
-  medicalForm.value.pwd = pwd.value.id
-
-  // fetch disability types
-  if (!disabilityTypes.value.length) {
-    const { data } = await api.get('/disability-types/')
-    disabilityTypes.value = data.results ?? data
-  }
-
-  const el = document.getElementById('medicalModal')
-  medicalModal = new bootstrap.Modal(el)
-  medicalModal.show()
-}
-
-// Create record
-const createMedicalRecord = async () => {
-  medLoading.value = true
-  try {
-    const payload = {
-      ...medicalForm.value,
-      has_assistive_device: Boolean(medicalForm.value.has_assistive_device),
-      health_insurance: Boolean(medicalForm.value.health_insance)
-    }
-
-    // 🚨 Critical validation
-    if (!payload.disability_type_ids.length) {
-      alert('Please select at least one disability type')
-      medLoading.value = false
-      return
-    }
-
-    await api.post('/medical-records/', payload)
-
-    medicalModal.hide()
-    await loadPWD()
-
-  } catch (err) {
-    console.error(err.response?.data || err)
-    alert(JSON.stringify(err.response?.data || 'Failed to save'))
-  } finally {
-    medLoading.value = false
-  }
 }
 
 async function generateAI() {

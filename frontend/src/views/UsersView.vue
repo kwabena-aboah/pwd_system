@@ -12,8 +12,7 @@
         <div class="row g-3">
           <div class="col-6"><label class="form-label">First Name</label><input v-model="newUser.first_name" class="form-control"></div>
           <div class="col-6"><label class="form-label">Last Name</label><input v-model="newUser.last_name" class="form-control"></div>
-          <div class="col-6"><label class="form-label">Username</label><input v-model="newUser.username" class="form-control"></div>
-          <div class="col-6"><label class="form-label">Email</label><input v-model="newUser.email" type="email" class="form-control"></div>
+          <div class="col-12"><label class="form-label">Email</label><input v-model="newUser.email" type="email" class="form-control"></div>
           <div class="col-6"><label class="form-label">Role</label>
             <select v-model="newUser.role" class="form-select">
               <option value="district_officer">District Officer</option>
@@ -63,7 +62,7 @@ import { ref, onMounted } from 'vue'
 import api from '@/services/api'
 const users = ref([])
 const showForm = ref(false)
-const newUser = ref({ first_name: '', last_name: '', username: '', email: '', role: 'data_entry', district: '', password: '' })
+const newUser = ref({ first_name: '', last_name: '', email: '', role: 'data_entry', district: '', password: '' })
 async function fetchUsers() {
   const { data } = await api.get('/users/')
   users.value = data.results ?? data

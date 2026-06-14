@@ -5,45 +5,9 @@
         <h1 class="page-title">Development Partners</h1>
         <p class="page-subtitle">{{ total }} partners registered</p>
       </div>
-      <button class="btn btn-primary" @click.self="showForm = true" v-if="auth.canEdit">
+      <button class="btn btn-primary" @click="showForm = true" v-if="auth.canEdit">
         <i class="bi bi-plus-lg me-1"></i>Add Partner
       </button>
-    </div>
-
-     <!-- Add Partner Modal -->
-    <div class="modal-overlay" v-if="showForm" @click.self="showForm = false">
-      <div class="modal-box">
-        <h5 class="mb-3">Add New Partner</h5>
-        <div class="row g-3">
-          <div class="col-6"><label class="form-label">Name *</label><input v-model="newPartner.name" class="form-control"></div>
-          <div class="col-6"><label class="form-label">Partner Type *</label>
-            <select v-model="newPartner.partner_type" class="form-select">
-              <option value="ngo">NGO</option>
-              <option value="government">Government Institution</option>
-              <option value="international">International Organization</option>
-              <option value="faith_based">Faith-Based Organization</option>
-              <option value="private">Private Sector</option>
-            </select>
-          </div>
-          <div class="col-6"><label class="form-label">Acronym</label><input v-model="newPartner.acronym" class="form-control"></div>
-          <div class="col-6">
-              <input type="file" id="photo-input" class="d-none" accept="image/*" @change="onPhotoChange">
-              <label for="photo-input" class="btn btn-sm btn-outline-secondary"><i class="bi bi-camera me-1"></i>Upload Logo</label>
-              <p class="text-muted small mt-1">JPG, PNG. Max 5MB</p>
-          </div>
-          <div class="col-6"><label class="form-label">Contact Person</label><input v-model="newPartner.contact_person" type="text" class="form-control"></div>
-          <div class="col-6"><label class="form-label">Contact Email</label><input v-model="newPartner.contact_email" type="email" class="form-control"></div>
-          <div class="col-6"><label class="form-label">Contact Phone</label><input v-model="newPartner.contact_phone" type="text" class="form-control"></div>
-          <div class="col-6"><label class="form-label">Address</label><textarea v-model="newPartner.address" type="text" class="form-control"></textarea></div>
-          <div class="col-6"><label class="form-label">District</label><input v-model="newPartner.district" type="text" class="form-control"></div>
-          <div class="col-6"><label class="form-label">Region</label><input v-model="newPartner.region" type="text" class="form-control"></div>
-          <div class="col-6"><label class="form-label">Registration Number</label><input v-model="newPartner.registration_number" type="text" class="form-control"></div>
-        </div>
-        <div class="d-flex justify-content-end gap-2 mt-3">
-          <button class="btn btn-outline-secondary" @click="showForm = false">Cancel</button>
-          <button class="btn btn-primary" @click="createPartner">Create Partner</button>
-        </div>
-      </div>
     </div>
 
     <div class="row g-4">
@@ -84,63 +48,12 @@ const auth = useAuthStore()
 const partners = ref([])
 const total = ref(0)
 const showForm = ref(false)
-const photoFile = ref(null)
-const newPartner = ref({ name: '', partner_type: 'ngo', contact_person: '', contact_phone: '', contact_email: '', district: '', region: '', registration_number: '' })
 
-async function fetchPartners() {
+onMounted(async () => {
   const { data } = await api.get('/partners/')
   partners.value = data.results ?? data
   total.value = data.count ?? data.length
-}
-
-function onPhotoChange(e) {
-  photoFile.value = e.target.files[0]
-}
-
-async function createPartner() {
-  const fd = new FormData()
-
-  // Append all fields
-  Object.keys(newPartner.value).forEach(key => {
-    if (newPartner.value[key] !== null && newPartner.value[key] !== '') {
-      fd.append(key, newPartner.value[key])
-    }
-  })
-
-  // Append file separately
-  if (photoFile.value) {
-    fd.append('photo', photoFile.value)
-  }
-
-  try {
-    await api.post('/partners/', fd, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    })
-
-    showForm.value = false
-
-    // Reset form (important for UX)
-    newPartner.value = {
-      name: '',
-      partner_type: 'ngo',
-      contact_person: '',
-      contact_phone: '',
-      contact_email: '',
-      district: '',
-      region: '',
-      registration_number: ''
-    }
-    photoFile.value = null
-
-    await fetchPartners()
-  } catch (err) {
-    console.error(err.response?.data || err)
-  }
-}
-
-onMounted(fetchPartners)
+})
 </script>
 
 <style scoped>

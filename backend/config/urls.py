@@ -9,8 +9,10 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import (
     TokenObtainPairView, TokenRefreshView, TokenBlacklistView
 )
-# from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerUIView
-from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
+from drf_spectacular.views import (
+    SpectacularAPIView,
+    SpectacularSwaggerView,  # Correct name
+)
 
 from apps.pwds.views import PWDViewSet, MedicalRecordViewSet, DisabilityTypeViewSet
 from apps.accounts.views import UserViewSet, AuthViewSet
@@ -19,6 +21,8 @@ from apps.complaints.views import ComplaintViewSet, ComplaintCategoryViewSet
 from apps.notifications.views import NotificationViewSet
 from apps.reports.views import ReportViewSet
 from apps.settings_app.views import SystemSettingsView, AuditLogViewSet
+from apps.subscriptions.views import (PlanViewSet, SubscriptionViewSet,
+    InvoiceViewSet, PaystackWebhookView)
 
 router = DefaultRouter()
 router.register('users', UserViewSet, basename='user')
@@ -34,6 +38,9 @@ router.register('complaints', ComplaintViewSet, basename='complaint')
 router.register('notifications', NotificationViewSet, basename='notification')
 router.register('reports', ReportViewSet, basename='report')
 router.register('audit-logs', AuditLogViewSet, basename='audit-log')
+router.register('plans', PlanViewSet, basename='plan')
+router.register('subscriptions', SubscriptionViewSet, basename='subscription')
+router.register('invoices', InvoiceViewSet, basename='invoice')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -43,6 +50,7 @@ urlpatterns = [
     path('api/auth/logout/', TokenBlacklistView.as_view(), name='token_blacklist'),
     path('api/auth/', include('apps.accounts.urls')),
     path('api/settings/', SystemSettingsView.as_view(), name='system-settings'),
+    path('api/webhooks/paystack/', PaystackWebhookView.as_view(), name='paystack-webhook'),
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) \

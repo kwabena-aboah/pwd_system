@@ -2,112 +2,12 @@
   <div>
     <div class="page-header">
       <h1 class="page-title">Complaints & Grievances</h1>
-      <button class="btn btn-primary" @click="openForm" v-if="auth.canEdit">
+      <button class="btn btn-primary" @click="showForm = true" v-if="auth.canEdit">
         <i class="bi bi-plus-lg me-1"></i>Log Complaint
       </button>
     </div>
 
-    <!-- Modal -->
-    <div class="modal-overlay" v-if="showForm" @click.self="closeForm">
-      <div class="modal-box">
-        <h5 class="mb-3">Log Complaint</h5>
-
-        <div class="row g-3">
-          <!-- PWD -->
-          <div class="col-6">
-            <label class="form-label">PWD Name *</label>
-            <select v-model="newComplaint.pwd" class="form-select">
-              <option value="">Select PWD</option>
-              <option v-for="p in pwds" :key="p.id" :value="p.id">
-                {{ p.first_name }} {{ p.last_name }}
-              </option>
-            </select>
-          </div>
-
-          <!-- Category -->
-          <div class="col-6">
-            <label class="form-label">Category *</label>
-            <select v-model="newComplaint.category" class="form-select">
-              <option value="">Select Category</option>
-              <option v-for="c in categories" :key="c.id" :value="c.id">
-                {{ c.name }}
-              </option>
-            </select>
-          </div>
-
-          <div class="col-6">
-            <label class="form-label">Title *</label>
-            <input v-model="newComplaint.title" class="form-control">
-          </div>
-
-          <div class="col-6">
-            <label class="form-label">Description *</label>
-            <textarea v-model="newComplaint.description" class="form-control"></textarea>
-          </div>
-
-          <div class="col-6">
-            <label class="form-label">Source *</label>
-            <select v-model="newComplaint.source" class="form-select">
-              <option value="pwd">PWD Self</option>
-              <option value="caregiver">Caregiver</option>
-              <option value="community">Community</option>
-              <option value="partner">Partner</option>
-              <option value="anonymous">Anonymous</option>
-            </select>
-          </div>
-
-          <div class="col-6">
-            <label class="form-label">Complainant Name</label>
-            <input v-model="newComplaint.complainant_name" class="form-control">
-          </div>
-
-          <div class="col-6">
-            <label class="form-label">Complainant Phone</label>
-            <input v-model="newComplaint.complainant_phone" class="form-control">
-          </div>
-
-          <div class="col-6">
-            <label class="form-label">Priority *</label>
-            <select v-model="newComplaint.priority" class="form-select">
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="urgent">Urgent</option>
-            </select>
-          </div>
-
-          <div class="col-6">
-            <label class="form-label">Status *</label>
-            <select v-model="newComplaint.status" class="form-select">
-              <option value="open">Open</option>
-              <option value="in_progress">In Progress</option>
-              <option value="resolved">Resolved</option>
-              <option value="closed">Closed</option>
-              <option value="escalated">Escalated</option>
-            </select>
-          </div>
-
-          <div class="col-6">
-            <label class="form-label">Resolution</label>
-            <textarea v-model="newComplaint.resolution" class="form-control"></textarea>
-          </div>
-
-          <div class="col-6">
-            <label class="form-label">Resolved At</label>
-            <input v-model="newComplaint.resolved_at" type="datetime-local" class="form-control">
-          </div>
-        </div>
-
-        <div class="d-flex justify-content-end gap-2 mt-3">
-          <button class="btn btn-outline-secondary" @click="closeForm">Cancel</button>
-          <button class="btn btn-primary" @click="createComplaint" :disabled="loading">
-            {{ loading ? 'Saving...' : 'Create Complaint' }}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Stats -->
+    <!-- Stats row -->
     <div class="row g-3 mb-4">
       <div class="col" v-for="s in stats" :key="s.label">
         <div class="stat-pill" :style="{ borderColor: s.color }">
@@ -117,17 +17,15 @@
       </div>
     </div>
 
-    <!-- Filters -->
     <div class="filter-bar mb-3">
-      <select v-model="statusFilter" class="form-select"  style="width: 160px;" @change="fetchComplaints">
+      <select v-model="statusFilter" class="form-select" style="width:160px" @change="fetchComplaints">
         <option value="">All Status</option>
         <option value="open">Open</option>
         <option value="in_progress">In Progress</option>
         <option value="resolved">Resolved</option>
         <option value="closed">Closed</option>
       </select>
-
-      <select v-model="priorityFilter" class="form-select" style="width: 160px;" @change="fetchComplaints">
+      <select v-model="priorityFilter" class="form-select" style="width:140px" @change="fetchComplaints">
         <option value="">All Priority</option>
         <option value="low">Low</option>
         <option value="medium">Medium</option>
@@ -136,139 +34,58 @@
       </select>
     </div>
 
-    <!-- List -->
     <div class="row g-3">
       <div class="col-12" v-for="c in complaints" :key="c.id">
         <div class="complaint-item" @click="router.push(`/complaints/${c.id}`)">
-          <div>
-            <strong>{{ c.title }}</strong>
-            <div class="text-muted small">
-              {{ c.complaint_number }} • {{ c.date_lodged }}
+          <div class="complaint-left">
+            <span class="priority-dot" :class="'priority-' + c.priority"></span>
+            <div>
+              <strong>{{ c.title }}</strong>
+              <div class="text-muted small">{{ c.complaint_number }} • {{ c.date_lodged }} • {{ c.source }}</div>
+              <div v-if="c.pwd_name" class="text-muted small"><i class="bi bi-person me-1"></i>{{ c.pwd_name }}</div>
             </div>
           </div>
-          <div>
+          <div class="complaint-right">
             <span class="badge" :class="priorityBadge(c.priority)">{{ c.priority }}</span>
             <span class="badge ms-1" :class="statusBadge(c.status)">{{ c.status }}</span>
+            <div v-if="c.assigned_to_name" class="text-muted small mt-1">
+              <i class="bi bi-person-fill me-1"></i>{{ c.assigned_to_name }}
+            </div>
           </div>
         </div>
       </div>
     </div>
   </div>
 </template>
-
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/services/api'
-
 const router = useRouter()
 const auth = useAuthStore()
-
 const complaints = ref([])
-const pwds = ref([])
-const categories = ref([])
-
 const showForm = ref(false)
-const loading = ref(false)
-
 const statusFilter = ref('')
 const priorityFilter = ref('')
-
 const summary = ref({ total: 0, open: 0, in_progress: 0, resolved: 0 })
-
 const stats = computed(() => [
   { label: 'Total', value: summary.value.total, color: '#1a56db' },
   { label: 'Open', value: summary.value.open, color: '#ef4444' },
   { label: 'In Progress', value: summary.value.in_progress, color: '#f59e0b' },
   { label: 'Resolved', value: summary.value.resolved, color: '#10b981' },
 ])
-
-const defaultForm = () => ({
-  pwd: '',
-  category: '',
-  title: '',
-  description: '',
-  source: 'pwd',
-  complainant_name: '',
-  complainant_phone: '',
-  priority: 'medium',
-  status: 'open',
-  resolution: '',
-  resolved_at: ''
-})
-
-const newComplaint = ref(defaultForm())
-
-// Fetch all data
-const fetchAll = async () => {
-  try {
-    const [cr, sr, pr, cat] = await Promise.all([
-      api.get('/complaints/'),
-      api.get('/complaints/statistics/'),
-      api.get('/pwds/'),
-      api.get('/complaint-categories/')
-    ])
-
-    complaints.value = cr.data.results ?? cr.data
-    summary.value = sr.data
-    pwds.value = pr.data.results ?? pr.data
-    categories.value = cat.data.results ?? cat.data
-  } catch (err) {
-    console.error(err)
-  }
+const priorityBadge = p => ({ low: 'bg-secondary-subtle text-secondary', medium: 'bg-warning-subtle text-warning', high: 'bg-danger-subtle text-danger', urgent: 'bg-danger text-white' }[p] || '')
+const statusBadge = s => ({ open: 'bg-danger-subtle text-danger', in_progress: 'bg-warning-subtle text-warning', resolved: 'bg-success-subtle text-success', closed: 'bg-secondary-subtle text-secondary' }[s] || '')
+async function fetchComplaints() {
+  const p = {}
+  if (statusFilter.value) p.status = statusFilter.value
+  if (priorityFilter.value) p.priority = priorityFilter.value
+  const [cr, sr] = await Promise.all([api.get('/complaints/', { params: p }), api.get('/complaints/statistics/')])
+  complaints.value = cr.data.results ?? cr.data
+  summary.value = sr.data
 }
-
-const fetchComplaints = async () => {
-  const params = {}
-  if (statusFilter.value) params.status = statusFilter.value
-  if (priorityFilter.value) params.priority = priorityFilter.value
-
-  const { data } = await api.get('/complaints/', { params })
-  complaints.value = data.results ?? data
-}
-
-// Modal control
-const openForm = () => {
-  newComplaint.value = defaultForm()
-  showForm.value = true
-}
-
-const closeForm = () => {
-  showForm.value = false
-}
-
-// Create complaint
-const createComplaint = async () => {
-  loading.value = true
-  try {
-    const { data } = await api.post('/complaints/', newComplaint.value)
-    complaints.value.unshift(data)
-    closeForm()
-  } catch (err) {
-    console.error(err.response?.data || err)
-    alert('Failed to create complaint')
-  } finally {
-    loading.value = false
-  }
-}
-
-// UI helpers
-const priorityBadge = p => ({
-  low: 'bg-secondary-subtle text-secondary',
-  medium: 'bg-warning-subtle text-warning',
-  high: 'bg-danger-subtle text-danger',
-  urgent: 'bg-danger text-white'
-}[p] || '')
-
-const statusBadge = s => ({
-  open: 'bg-danger-subtle text-danger',
-  in_progress: 'bg-warning-subtle text-warning',
-  resolved: 'bg-success-subtle text-success',
-  closed: 'bg-secondary-subtle text-secondary'
-}[s] || '')
-
-onMounted(fetchAll)
+onMounted(fetchComplaints)
 </script>
 <style scoped>
 .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
