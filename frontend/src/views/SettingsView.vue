@@ -133,79 +133,251 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, reactive, onMounted, onBeforeUnmount } from 'vue'
 import { useSettingsStore } from '@/stores/settings'
 
 const settingsStore = useSettingsStore()
+
 const saving = ref(false)
 const saved = ref(false)
-const currentLogoUrl = ref(null)
+const loading = ref(true)
+
 const logoFile = ref(null)
 const logo2File = ref(null)
+const currentLogoUrl = ref(null)
 
-const form = ref({
-  system_name: '', short_name: '', district_name: '', region: '',
-  primary_color: '#1a56db', secondary_color: '#7e3af2',
-  accent_color: '#ff5a1f', text_on_primary: '#ffffff',
-  album_title: '', album_subtitle: '', album_photos_per_page: 12,
-  album_show_reg_number: true, album_show_disability: true,
-  album_show_community: true, album_show_phone: false,
-  contact_email: '', contact_phone: '', address: '', website: '',
-})
+const defaultForm = {
+  system_name: '',
+  short_name: '',
+  district_name: '',
+  region: '',
+
+  primary_color: '#1a56db',
+  secondary_color: '#7e3af2',
+  accent_color: '#ff5a1f',
+  text_on_primary: '#ffffff',
+
+  album_title: '',
+  album_subtitle: '',
+  album_photos_per_page: 12,
+
+  album_show_reg_number: true,
+  album_show_disability: true,
+  album_show_community: true,
+  album_show_phone: false,
+
+  contact_email: '',
+  contact_phone: '',
+  address: '',
+  website: '',
+}
+
+const form = reactive({ ...defaultForm })
 
 const colorFields = [
   { key: 'primary_color', label: 'Primary' },
   { key: 'secondary_color', label: 'Secondary' },
   { key: 'accent_color', label: 'Accent' },
-  { key: 'text_on_primary', label: 'Text on Primary' },
+  { key: 'text_on_primary', label: 'Text Color' },
 ]
 
 const toggleFields = [
-  { key: 'album_show_reg_number', label: 'Show Reg. Number' },
-  { key: 'album_show_disability', label: 'Show Disability' },
-  { key: 'album_show_community', label: 'Show Community' },
-  { key: 'album_show_phone', label: 'Show Phone' },
+  {
+    key: 'album_show_reg_number',
+    label: 'Show Registration Number',
+  },
+  {
+    key: 'album_show_disability',
+    label: 'Show Disability',
+  },
+  {
+    key: 'album_show_community',
+    label: 'Show Community',
+  },
+  {
+    key: 'album_show_phone',
+    label: 'Show Phone',
+  },
 ]
 
 const themes = [
-  { name: 'Blue (Default)', primary: '#1a56db', secondary: '#7e3af2', accent: '#ff5a1f' },
-  { name: 'Green', primary: '#059669', secondary: '#0284c7', accent: '#f59e0b' },
-  { name: 'Purple', primary: '#7c3aed', secondary: '#db2777', accent: '#f97316' },
-  { name: 'Red', primary: '#dc2626', secondary: '#ea580c', accent: '#16a34a' },
-  { name: 'Teal', primary: '#0891b2', secondary: '#0d9488', accent: '#f59e0b' },
-  { name: 'Slate Dark', primary: '#1e293b', secondary: '#334155', accent: '#38bdf8' },
-  { name: 'Ghana Gold', primary: '#c8a214', secondary: '#006b3c', accent: '#ce1126' },
+  {
+    name: 'Blue',
+    primary: '#1a56db',
+    secondary: '#7e3af2',
+    accent: '#ff5a1f',
+  },
+  {
+    name: 'Green',
+    primary: '#059669',
+    secondary: '#0284c7',
+    accent: '#f59e0b',
+  },
+  {
+    name: 'Purple',
+    primary: '#7c3aed',
+    secondary: '#db2777',
+    accent: '#f97316',
+  },
+  {
+    name: 'Red',
+    primary: '#dc2626',
+    secondary: '#ea580c',
+    accent: '#16a34a',
+  },
+  {
+    name: 'Teal',
+    primary: '#0891b2',
+    secondary: '#0d9488',
+    accent: '#f59e0b',
+  },
+  {
+    name: 'Slate',
+    primary: '#1e293b',
+    secondary: '#334155',
+    accent: '#38bdf8',
+  },
+  {
+    name: 'Ghana Gold',
+    primary: '#c8a214',
+    secondary: '#006b3c',
+    accent: '#ce1126',
+  },
 ]
 
-function applyTheme(t) {
-  form.value.primary_color = t.primary
-  form.value.secondary_color = t.secondary
-  form.value.accent_color = t.accent
+function applyTheme(theme) {
+  form.primary_color = theme.primary
+  form.secondary_color = theme.secondary
+  form.accent_color = theme.accent
 }
 
-function onLogo(e) {
-  logoFile.value = e.target.files[0]
-  currentLogoUrl.value = URL.createObjectURL(logoFile.value)
+function validateImage(file) {
+  if (!file) return false
+
+  const validTypes = [
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/svg+xml'
+  ]
+
+  const maxSize = 5 * 1024 * 1024
+
+  if (!validTypes.includes(file.type)) {
+    alert('Only JPG, PNG, WEBP and SVG files are allowed.')
+    return false
+  }
+
+  if (file.size > maxSize) {
+    alert('Image size cannot exceed 5MB.')
+    return false
+  }
+
+  return true
 }
-function onLogo2(e) { logo2File.value = e.target.files[0] }
+
+function onLogo(event) {
+  const file = event.target.files?.[0]
+
+  if (!validateImage(file)) return
+
+  logoFile.value = file
+
+  if (currentLogoUrl.value?.startsWith('blob:')) {
+    URL.revokeObjectURL(currentLogoUrl.value)
+  }
+
+  currentLogoUrl.value = URL.createObjectURL(file)
+}
+
+function onLogo2(event) {
+  const file = event.target.files?.[0]
+
+  if (!validateImage(file)) return
+
+  logo2File.value = file
+}
+
+function resetForm() {
+  Object.assign(form, defaultForm)
+
+  logoFile.value = null
+  logo2File.value = null
+
+  currentLogoUrl.value = null
+}
 
 async function saveSettings() {
   saving.value = true
-  const fd = new FormData()
-  Object.entries(form.value).forEach(([k, v]) => fd.append(k, v))
-  if (logoFile.value) fd.append('logo', logoFile.value)
-  if (logo2File.value) fd.append('logo_secondary', logo2File.value)
+
   try {
+    const fd = new FormData()
+
+    Object.entries(form).forEach(([key, value]) => {
+      fd.append(key, value)
+    })
+
+    if (logoFile.value) {
+      fd.append('logo', logoFile.value)
+    }
+
+    if (logo2File.value) {
+      fd.append('logo_secondary', logo2File.value)
+    }
+
     await settingsStore.updateSettings(fd)
+
     saved.value = true
-    setTimeout(() => { saved.value = false }, 3000)
-  } finally { saving.value = false }
+
+    setTimeout(() => {
+      saved.value = false
+    }, 3000)
+
+  } catch (error) {
+    console.error(error)
+
+    alert(
+      error?.response?.data?.detail ||
+      'Unable to save settings.'
+    )
+
+  } finally {
+    saving.value = false
+  }
 }
 
-onMounted(async () => {
-  await settingsStore.fetchSettings()
-  Object.assign(form.value, settingsStore.settings)
-  currentLogoUrl.value = settingsStore.settings.logo_url || null
+async function loadSettings() {
+  loading.value = true
+
+  try {
+    await settingsStore.fetchSettings()
+
+    const settings = settingsStore.settings || {}
+
+    Object.keys(form).forEach(key => {
+      if (settings[key] !== undefined && settings[key] !== null) {
+        form[key] = settings[key]
+      }
+    })
+
+    currentLogoUrl.value =
+      settings.logo_url ||
+      settings.logo ||
+      null
+
+  } catch (error) {
+    console.error(error)
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(loadSettings)
+
+onBeforeUnmount(() => {
+  if (currentLogoUrl.value?.startsWith('blob:')) {
+    URL.revokeObjectURL(currentLogoUrl.value)
+  }
 })
 </script>
 

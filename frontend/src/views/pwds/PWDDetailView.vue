@@ -100,7 +100,14 @@
       <div v-if="!pwd.medical_records?.length" class="empty-state">
         <i class="bi bi-clipboard2-pulse"></i>
         <p>No medical record added yet.</p>
-        <button class="btn btn-primary btn-sm" v-if="auth.canEdit">Add Medical Record</button>
+        <button
+          class="btn btn-primary btn-sm"
+          v-if="auth.canEdit"
+          @click="showMedicalModal = true"
+        >
+          <i class="bi bi-plus-circle me-1"></i>
+          Add Medical Record
+        </button>
       </div>
       <div v-else class="info-grid" v-for="med in pwd.medical_records" :key="med.id">
         <InfoCard title="Disability Details" icon="bi-accessibility">
@@ -215,6 +222,102 @@
     <div class="spinner-border" style="color:var(--system-primary)"></div>
     <p class="mt-2 text-muted">Loading record…</p>
   </div>
+
+ <!-- ================= MODAL ================= -->
+    <div v-if="showMedicalModal" class="modal-backdrop-custom">
+      <div class="medical-modal">
+
+        <div class="modal-header">
+          <h5>Add Medical Record</h5>
+          <button class="btn-close" @click="showMedicalModal = false"></button>
+        </div>
+
+        <div class="modal-body">
+
+          <!-- DISABILITY TYPES -->
+          <label class="mt-3">Disability Types</label>
+          <Multiselect
+            v-model="medicalForm.disability_types"
+            :options="disabilityTypesOptions"
+            label="name"
+            track-by="id"
+            :multiple="true"
+            placeholder="Select disability types"
+            @search-change="loadDisabilityTypes"
+          />
+
+          <!-- SEVERITY -->
+          <label class="mt-3">Severity</label>
+          <Multiselect
+            v-model="medicalForm.disability_severity"
+            :options="['Mild','Moderate','Severe','Profound']"
+          />
+
+          <!-- ONSET -->
+          <label class="mt-3">Onset Type</label>
+          <Multiselect
+            v-model="medicalForm.disability_onset"
+            :options="['Congenital (from birth)','Acquired','Progressive']"
+          />
+
+          <!-- ONSET AGE -->
+          <input v-model="medicalForm.onset_age" class="form-control mt-3" placeholder="Onset Age" />
+
+          <!-- CAUSE -->
+          <textarea v-model="medicalForm.cause_of_disability" class="form-control mt-3" placeholder="Cause"></textarea>
+
+          <!-- ASSISTIVE DEVICE -->
+          <div class="form-check mt-3">
+            <input type="checkbox" v-model="medicalForm.has_assistive_device" class="form-check-input" />
+            <label>Uses Assistive Device</label>
+          </div>
+
+          <input v-if="medicalForm.has_assistive_device"
+                 v-model="medicalForm.assistive_device_type"
+                 class="form-control mt-2"
+                 placeholder="Device Type" />
+
+          <!-- DEVICE CONDITION -->
+          <label class="mt-3">Device Condition</label>
+          <Multiselect
+            v-model="medicalForm.device_condition"
+            :options="['Good','Fair','Poor','Needed']"
+          />
+
+          <!-- MEDICATIONS -->
+          <input v-model="medicalForm.current_medications" class="form-control mt-3" placeholder="Current Medications" />
+
+          <!-- HOSPITAL -->
+          <input v-model="medicalForm.hospital_facility" class="form-control mt-3" placeholder="Hospital / Facility" />
+
+          <!-- CHECKUP -->
+          <input type="date" v-model="medicalForm.last_medical_checkup" class="form-control mt-3" />
+
+          <!-- INSURANCE -->
+          <div class="form-check mt-3">
+            <input type="checkbox" v-model="medicalForm.health_insurance" class="form-check-input" />
+            <label>Health Insurance</label>
+          </div>
+
+          <input v-if="medicalForm.health_insurance"
+                 v-model="medicalForm.nhis_number"
+                 class="form-control mt-2"
+                 placeholder="NHIS Number" />
+
+          <!-- NOTES -->
+          <textarea v-model="medicalForm.additional_health_notes"
+                    class="form-control mt-3"
+                    placeholder="Additional Notes"></textarea>
+
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" @click="showMedicalModal = false">Cancel</button>
+          <button class="btn btn-primary" @click="saveMedicalRecord">Save</button>
+        </div>
+
+      </div>
+    </div>
 </template>
 
 <script setup>
@@ -233,6 +336,33 @@ const allocations = ref([])
 const complaints = ref([])
 const activeTab = ref('personal')
 const aiLoading = ref(false)
+const showMedicalModal = ref(false)
+
+const disabilityTypesOptions = ref([])
+
+
+const medicalForm = ref({
+  disability_types: [],
+  disability_severity: null,
+  disability_onset: null,
+  onset_age: null,
+  cause_of_disability: '',
+  has_assistive_device: false,
+  assistive_device_type: '',
+  device_condition: null,
+  current_medications: '',
+  hospital_facility: '',
+  last_medical_checkup: '',
+  health_insurance: false,
+  nhis_number: '',
+  additional_medical_notes: ''
+})
+
+
+async function loadDisabilityTypes() {
+  const { data } = await api.get('/disability-types/')
+  disabilityTypesOptions.value = data
+}
 
 const tabs = [
   { id: 'personal', label: 'Personal', icon: 'bi-person-fill' },
@@ -259,6 +389,39 @@ async function loadPWD() {
   complaints.value = cb.data.results ?? cb.data
 }
 
+/* ================= SAVE ================= */
+
+async function saveMedicalRecord() {
+  await api.post('/medical-records/', {
+    pwd: pwd.value.id,
+    ...medicalForm.value
+  })
+
+  showMedicalModal.value = false
+    resetForm()
+    await loadPWD()
+  }
+
+  function resetForm() {
+  medicalForm.value = {
+    disability_types: [],
+    disability_severity: null,
+    disability_onset: null,
+    onset_age: null,
+    cause_of_disability: '',
+    has_assistive_device: false,
+    assistive_device_type: '',
+    device_condition: null,
+    current_medications: '',
+    hospital_facility: '',
+    last_medical_checkup: '',
+    health_insurance: false,
+    nhis_number: '',
+    additional_medical_notes: ''
+  }
+}
+
+
 async function generateAI() {
   aiLoading.value = true
   try {
@@ -268,7 +431,10 @@ async function generateAI() {
   } finally { aiLoading.value = false }
 }
 
-onMounted(loadPWD)
+onMounted(() => {
+  loadPWD()
+  loadDisabilityTypes()
+})
 </script>
 
 <style scoped>
@@ -352,4 +518,39 @@ onMounted(loadPWD)
 .ai-section li { margin-bottom: 5px; font-size: 0.875rem; }
 
 .doc-item { background: white; border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px; }
+
+.modal-backdrop-custom {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.medical-modal {
+  width: 100%;
+  max-width: 750px;
+  background: #fff;
+  border-radius: 12px;
+}
+
+.modal-header,
+.modal-footer {
+  padding: 1rem;
+  border-bottom: 1px solid #eee;
+}
+.modal-footer {
+  border-top: 1px solid #eee;
+  border-bottom: none;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.modal-body {
+  padding: 1rem;
+  max-height: 70vh;
+  overflow-y: auto;
+}
 </style>
